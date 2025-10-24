@@ -24,6 +24,9 @@ Fitur yang ada pada ITS OK terbagi menjadi 2 yaitu untuk mahasiswa (pelanggan) d
 - **Psikolog**
   - Melayani Konsultasi Offline: Psikolog menerima mahasiswa untuk sesi tatap muka di SHCC ITS.
   - Melayani Konsultasi Online: Psikolog dapat memberikan layanan konsultasi melalui video call sesuai jadwal yang tersedia.
+- **Admin**
+  - Manajemen Psikolog: Mengatur dan menambah daftar psikolog yang melayani konsultasi untuk mahasiswa.
+  - Verifikasi Konsultasi Offline: Memantau hasil pengajuan mahasiswa untuk mendaftar layanan konsultasi offline.
 
 ## Software Critical Design Review Document
 

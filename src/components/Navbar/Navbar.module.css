@@ -1,0 +1,98 @@
+/* Navbar.module.css */
+.navbar {
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  position: fixed; /* Ubah dari sticky ke fixed */
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%; /* Pastikan navbar mengambil lebar penuh */
+  font-size: 1rem;
+  background-color: #fefefe;
+}
+
+/* Kontainer kanan yang berisi nav + tombol */
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-left: auto;
+}
+
+/* Group menu navigasi */
+.navItems {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navLink {
+  color: #000;
+  font-weight: 500;
+}
+
+.navLink:hover {
+  color: var(--yellow-primary);
+}
+
+.brand {
+  font-weight: bold;
+  font-size: 20px;
+  margin-left: 2rem;
+}
+
+.brandText{
+  font-size: 1.2rem;
+}
+
+.buttonGroup {
+  display: flex;
+  align-items: center;
+  /* border : 1px solid #ccc; */
+}
+
+.buttonGroup > button {
+  display: flex;
+  margin: 0 1rem;
+  padding: 0.8rem 1.5rem 0.8rem 1.5rem;
+  border-radius: 1.875rem;
+}
+
+.primaryButton {
+  background-color: var(--yellow-primary);
+  border-color: var(--yellow-primary);
+  color: var(--foreground);
+  font-weight: bold;
+}
+
+.primaryButton:hover {
+  background-color: var(--yellow-primary);
+  border-color: var(--yellow-primary);
+  color: var(--foreground);
+}
+
+.primaryButton:active {
+  background-color: var(--yellow-primary) !important;
+  border-color: var(--yellow-primary) !important;
+  color: var(--foreground) !important;
+}
+
+.secondaryButton {
+  background-color: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: var(--background);
+  font-weight: bold;
+}
+
+.secondaryButton:hover {
+  background-color: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: var(--background);
+}
+
+.secondaryButton:active {
+  background-color: var(--blue-primary) !important;
+  border-color: var(--blue-primary) !important;
+  color: var(--background) !important;
+}

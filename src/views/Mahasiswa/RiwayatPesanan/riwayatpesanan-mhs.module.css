@@ -1,0 +1,39 @@
+.pageWrapper {
+  background-color: #fafafa;
+  min-height: 100vh;
+  width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.headerLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto 2rem auto;
+  padding: 0 2.7rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #333333;
+  margin-top: -0.1rem;
+}
+
+.searchBarContainer {
+  max-width: 1200px;
+  margin: 0 auto 1.5rem auto;
+  padding: 0 2.7rem;
+}
+
+.searchInput {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  font-size: 1rem;
+}

@@ -1,0 +1,134 @@
+.pageWrapper {
+  background-color: #fafafa;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 2rem;
+}
+
+.headerLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.backButton {
+  display: flex;
+  margin: 0 1rem;
+  padding: 0.8rem 1.5rem 0.8rem 1.2rem;
+  background-color: white;
+  border-color: grey;
+  align-items: center;
+  gap: 0.5rem;
+  color: black;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.backButton:hover {
+  background-color: #e2e2e2;
+  border-color: grey;
+  color: black;
+}
+
+.backButton:active {
+  background-color: #c4c4c4 !important;
+  border-color: grey !important;
+  color: black !important;
+}
+
+.cardContainer {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.06);
+  margin-right: 1rem;
+}
+
+.subTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: #333;
+}
+
+.searchWrapper {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 250px;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  background-color: #ffffff;
+}
+
+.filterButton {
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  border: 1px solid #ccc;
+}
+
+.psychologistGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 3rem;
+}
+
+.psychologistCard {
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform, box-shadow;
+}
+
+
+.psychologistCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.imageWrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.psychologistName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.1rem;
+  min-height: 2.5rem;
+}
+
+.stars {
+  font-size: 1.1rem;
+  color: #fbbf24;
+}

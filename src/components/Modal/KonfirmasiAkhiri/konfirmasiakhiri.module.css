@@ -1,0 +1,63 @@
+/* src/components/Modal/KonfirmasiAkhiri/konfirmasiakhiri.module.css */
+
+.dialogCentered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* HAPUS BARIS INI: min-height: calc(100% - 1rem); */
+}
+
+.modalWrapper {
+  border-radius: 16px;
+  border: none;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.content {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  min-width: 340px;
+  max-width: 420px;
+  margin: auto;
+}
+
+.icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-top: 0;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.buttonContainer {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.buttonContainer > button {
+  flex-grow: 1;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  border-radius: 8px;
+}

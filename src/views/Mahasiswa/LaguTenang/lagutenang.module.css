@@ -1,0 +1,112 @@
+.pageWrapper {
+  background-color: #fafafa;
+  min-height: 100vh;
+  width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.headerLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto 2rem auto;
+  padding: 0 2.7rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #333333;
+  margin-top: -0.1rem;
+}
+
+.searchBarContainer {
+  max-width: 1200px;
+  margin: 0 auto 1.5rem auto;
+  padding: 0 2.7rem;
+}
+
+.searchInput {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  font-size: 1rem;
+}
+
+/* === Style Kartu Lagu === */
+.wrapper {
+  max-width: 1200px;
+  margin: 1.5rem auto;
+  padding: 0 2.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.iconContainer {
+  background-color: #FFEBBA;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 48px;
+  width: 48px;
+}
+
+.icon {
+  color: black;
+}
+
+.coverWrapper {
+  position: relative; /* wajib untuk <Image fill /> */
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.coverImage {
+  object-fit: cover; /* agar gambar memenuhi kotak tanpa distorsi */
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #1f2937;
+  margin: 0;
+}
+
+.audioPlayer {
+  width: 100%;
+}

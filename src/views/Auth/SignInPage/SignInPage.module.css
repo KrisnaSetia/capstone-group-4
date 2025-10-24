@@ -1,0 +1,108 @@
+/* === Layout 60:40 === */
+.container {
+  display: grid;
+  min-height: 100vh;
+  background-color: white;
+  grid-template-columns: 60% 40%;
+}
+
+/* Bagian kiri */
+.left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .left {
+    padding: 2.5rem;
+  }
+}
+
+/* Bungkus form */
+.formWrapper {
+  width: 100%;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Bagian kanan */
+.right {
+  position: relative;
+  display: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 1024px) {
+  .right {
+    display: block;
+  }
+}
+
+.image {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  max-height: 90vh; /* batasi tinggi gambar */
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* === Styling untuk Group Tombol === */
+.buttonGroup {
+  display: flex;
+  align-items: center;
+}
+
+.buttonGroup > button {
+  display: flex;
+  margin: 0 1rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: 1.875rem;
+}
+
+/* Tombol Utama */
+.primaryButton {
+  background-color: var(--yellow-primary);
+  border-color: var(--yellow-primary);
+  color: var(--foreground);
+  font-weight: bold;
+}
+
+.primaryButton:hover {
+  background-color: var(--yellow-primary);
+  border-color: var(--yellow-primary);
+  color: var(--foreground);
+}
+
+.primaryButton:active {
+  background-color: var(--yellow-primary) !important;
+  border-color: var(--yellow-primary) !important;
+  color: var(--foreground) !important;
+}
+
+/* Tombol Sekunder */
+.secondaryButton {
+  background-color: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: var(--background);
+  font-weight: bold;
+}
+
+.secondaryButton:hover {
+  background-color: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: var(--background);
+}
+
+.secondaryButton:active {
+  background-color: var(--blue-primary) !important;
+  border-color: var(--blue-primary) !important;
+  color: var(--background) !important;
+}

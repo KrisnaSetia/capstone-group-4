@@ -1,0 +1,42 @@
+.buttonSignIn{
+    background-color: var(--yellow-primary);
+    border-color: var(--yellow-primary);
+    color:black;
+    font-weight: bold;
+    border-radius: 60px;   
+}
+.buttonSignIn:hover{
+    background-color: #ffbe33;
+    border-color: #ffbe33;
+    color:black;
+    border-radius: 60px;
+}
+.buttonSignIn:active{
+    background-color: var(--yellow-primary) !important;
+    border-color: var(--yellow-primary) !important;
+    color:black !important;
+    border-radius: 60px;
+}
+.buttonSignUp{
+    background-color: white;
+    border-color: var(--blue-primary);
+    color:var(--blue-primary);
+    font-weight: bold;
+    border-radius: 60px;   
+}
+
+/* signupform.module.css */
+.errorBox {
+  background-color: #fef2f2;     /* mirip Tailwind: bg-red-50 */
+  border: 1px solid #fecaca;     /* mirip Tailwind: border-red-200 */
+  border-radius: 0.375rem;       /* Tailwind: rounded-md */
+  padding: 0.375rem;             /* Tailwind: p-1.5 (6px) */
+}
+
+.errorText {
+  font-size: 0.9rem;            /* Tailwind: text-xs */
+  color: #dc2626;                /* Tailwind: text-red-600 */
+  line-height: 1.25;
+  font-weight: bold;
+  margin: 1rem ;           /* Tailwind: leading-tight */
+}

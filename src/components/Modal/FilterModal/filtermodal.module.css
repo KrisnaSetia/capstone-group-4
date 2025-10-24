@@ -1,0 +1,57 @@
+.modalBody {
+  padding: 1.5rem;
+}
+
+.filterSection {
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+
+.dateInput {
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.sessionBox {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #ffffff;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.sessionBox:hover {
+  background-color: #efefef;
+}
+
+.sessionBoxChecked {
+  background-color: #e0e0e0;
+  border-color: #aaa;
+}
+
+.checkboxInput {
+  margin-right: 0.75rem;
+}
+
+.modalHeader {
+  background-color: #f1f1f1;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}

@@ -1,0 +1,181 @@
+.pageWrapper {
+  background-color: #fafafa;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 2.5rem 2rem 2.5rem 2rem;
+  margin: 0;
+}
+
+.greetingSection {
+  text-align: center;
+  padding-top: 0;
+  padding-bottom: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.greeting {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 0.25rem;
+}
+
+.role {
+  color: #6B7280;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.serviceSection {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.serviceTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333333;
+  text-align: left;
+}
+
+.serviceSubtitle {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 2rem;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.cardBox {
+  background-color: #fff;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  padding: 1.5rem;
+  text-align: left;
+  height: 100%;
+}
+
+.cardBox:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+}
+
+.imagePlaceholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 0.75rem;
+}
+
+.cardText {
+  font-size: 0.875rem;
+  color: #555555;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+.primaryButton {
+  background-color: #5378BC;
+  color: white;
+  border: none;
+  width: 100%;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.primaryButton:hover {
+  background-color: #46699c;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.primaryButton:active {
+  background-color: #2a3c6f !important;
+  transform: translateY(0); /* Mengembalikan posisi tombol ke semula saat aktif */
+  box-shadow: none; /* Menghilangkan shadow saat aktif */
+}
+
+.fadeInSection {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  will-change: opacity, transform;
+}
+
+.isVisible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (max-width: 991.98px) {
+  .pageWrapper {
+    padding: 2rem 1.5rem;
+  }
+  .greetingSection {
+    padding-bottom: 1.5rem;
+  }
+  .greeting { font-size: 1.6rem; }
+  .serviceSection { padding: 1.5rem; }
+  .serviceTitle { font-size: 1.15rem; }
+  .cardBox { padding: 1.25rem; }
+}
+
+@media (max-width: 767.98px) {
+  .pageWrapper {
+    padding: 1.5rem 1rem;
+  }
+  .greetingSection {
+    padding-bottom: 1rem;
+  }
+  .greeting { font-size: 1.5rem; }
+  .role { font-size: 0.9rem; }
+
+  .serviceSection {
+    padding: 1rem;
+  }
+  .serviceTitle, .serviceSubtitle {
+    text-align: center;
+  }
+  .serviceSubtitle { margin-bottom: 1.5rem; }
+}
+
+@media (max-width: 575.98px) {
+  .pageWrapper {
+    padding: 1rem 0.75rem;
+  }
+  .greeting { font-size: 1.3rem; }
+  .serviceSection { padding: 0.75rem; }
+  .cardBox { padding: 0.75rem; }
+  .imagePlaceholder { height: 140px; }
+  .primaryButton {
+    padding: 0.65rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}

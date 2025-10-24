@@ -1,0 +1,80 @@
+.dialogCentered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modalWrapper {
+  border-radius: 16px;
+  border: none;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.content {
+  background: white;
+  padding: 2rem 2.5rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  min-width: 320px;
+  max-width: 380px;
+  margin: auto;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1.5rem;
+}
+
+.stars {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.star {
+  cursor: pointer;
+  color: #e5e7eb;
+  transition: color 0.2s ease;
+  font-size: 2.75rem; /* diperbesar */
+  margin: 0 0.25rem;  /* beri jarak antar bintang */
+}
+
+.star.filled {
+  color: #facc15;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.kirimButton {
+  background-color: #5378bc !important;
+  border: none !important;
+  padding: 0.5rem 1.25rem !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  color: white !important;
+}
+
+.kirimButton:hover {
+  background-color: #4669a3 !important;
+}
+
+.batalButton {
+  background-color: #6b7280 !important; /* abu-abu tua */
+  border: none !important;
+  padding: 0.5rem 1.25rem !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  color: white !important;
+}
+
+.batalButton:hover {
+  background-color: #4b5563 !important;
+}

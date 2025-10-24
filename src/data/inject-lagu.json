@@ -1,0 +1,36 @@
+[{
+  "judul_lagu": "Melodi Senja",
+  "artis": "Suara Alam",
+  "durasi": 118,
+  "file_url": "/audio/music1.mp3",
+  "url_foto": "/audio/music1.png"
+},
+{
+  "judul_lagu": "Langit Tenang",
+  "artis": "Suara Alam",
+  "durasi": 135,
+  "file_url": "/audio/music2.mp3",
+  "url_foto": "/audio/music2.png"
+},
+{
+  "judul_lagu": "Pagi Damai",
+  "artis": "Suara Alam",
+  "durasi": 187,
+  "file_url": "/audio/music3.mp3",
+  "url_foto": "/audio/music3.png"
+},
+{
+  "judul_lagu": "Sunyi Dalam Nada",
+  "artis": "Suara Alam",
+  "durasi": 125,
+  "file_url": "/audio/music4.mp3",
+  "url_foto": "/audio/music4.png"
+},
+{
+  "judul_lagu": "Senandung Alam",
+  "artis": "Suara Alam",
+  "durasi": 312,
+  "file_url": "/audio/music5.mp3",
+  "url_foto": "/audio/music5.png"
+}
+]

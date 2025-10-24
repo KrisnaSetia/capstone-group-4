@@ -1,0 +1,73 @@
+.pageWrapper {
+  background-color: #fafafa;
+  min-height: 100vh;
+  width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.headerLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto 2rem auto;
+  padding: 0 2.7rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #333333;
+  margin-top: -0.1rem;
+}
+
+.registerButton {
+  background-color: #5378BC !important;
+  border: none !important;
+  padding: 0.5rem 1.25rem !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white !important;
+  transition: all 0.2s ease-in-out;
+}
+
+.registerButton:hover {
+  background-color: #4669a3 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.plusIcon {
+  color: #FFD680;
+}
+
+@media (max-width: 768px) {
+  .pageWrapper {
+    padding: 1.5rem 1rem;
+    align-items: stretch;
+  }
+
+  .headerLine {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0;
+  }
+
+  .sectionTitle {
+    font-size: 1.1rem;
+    text-align: left;
+    margin-top: 0;
+  }
+
+  .registerButton {
+    /* JANGAN pakai width 100%, biarkan auto */
+    font-size: 0.95rem;
+    padding: 0.6rem 1.2rem !important;
+    align-self: flex-start; /* biar tetap ke kiri */
+  }
+}

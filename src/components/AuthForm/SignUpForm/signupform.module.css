@@ -1,0 +1,47 @@
+.buttonSignUp {
+  background-color: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: white;
+  font-weight: bold;
+  border-radius: 15px;
+}
+.buttonSignUp:hover {
+  background-color: var(--yellow-primary);
+  border-color: var(--yellow-primary);
+  color: black;
+}
+.loginLink {
+  color: #f7931e;
+  font-weight: bold;
+  cursor: pointer;
+  vertical-align: baseline;    /* penting! */
+  padding-bottom: 0;
+  padding-top: 0;
+  height: auto;
+  line-height: 1.2;           /* atau sesuai kebutuhan */
+  font-size: inherit;
+  margin-bottom: 0;           /* hilangkan offset bawah */
+  margin-top: 0;
+  display: inline; 
+  font-size: medium;
+}
+.h1 {
+ font-size: 2.1rem;
+ font-weight: bold;
+}
+
+.dateSelect {
+  border-radius: 2rem;
+  min-width: 85px;
+  padding: 8px 12px;
+}
+
+@media (max-width: 600px) {
+  .h1 {
+    font-size: 1.3rem;
+  }
+  .buttonSignUp {
+    font-size: 1rem;
+    padding: 0.8rem 1rem;
+  }
+}

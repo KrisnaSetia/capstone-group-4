@@ -1,0 +1,131 @@
+.pageWrapper {
+  background-color: #fafafa;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0;
+  max-width: 2000px;
+  margin: 0 auto;
+}
+
+.contentWrapper {
+  max-width: 1172px;    /* match sama dashboard layout kamu */
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+
+.sectionTitleWrapper {
+  margin-bottom: 1.5rem;
+}
+
+.pageTitle {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #333333;
+}
+
+.editTitle {
+  font-size: 1.1rem;
+  color: #111;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.formContainer {
+  border: 1px solid var(--blue-primary);
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 1500px;
+  margin-left: 0;
+  margin-right: 0;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.20), 0 1.5px 4px rgba(0,0,0,0.20);
+  width: 100%;
+}
+
+.profileForm {
+  width: 100%;
+}
+
+.formGroup {
+  margin-bottom: 1.2rem;
+}
+
+.formLabel {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+.formControl {
+  border-radius: 7px;
+  border: 1px solid #e5e7eb;
+  background: #fafbfc;
+  font-size: 1rem;
+  color: #222;
+  padding: 0.62rem 1rem;
+  transition: border-color 0.2s;
+  margin-top: 0.15rem;
+}
+
+.formControl:focus {
+  border-color: #5378bc;
+  box-shadow: 0 0 0 2px rgba(83,120,188,0.08);
+}
+
+.saveButton {
+  background-color: #5378bc;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.7rem 2.5rem;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(83, 120, 188, 0.04);
+}
+
+.saveButton:hover {
+  background-color: #46699c;
+}
+.notes{
+  font-size: 0.9rem;
+  color: red;
+  margin-top: 0.5rem;
+}
+
+.saveButton:active {
+  background-color: #2a3c6f;
+}
+.saveButton:disabled {
+  background-color: #283968;
+}
+
+@media (max-width: 1200px) {
+  .pageWrapper { max-width:98vw; padding: 2rem 1.2rem; }
+  .formContainer { 
+    padding: 1.6rem 1rem;
+    max-width: 98vw;
+ }
+}
+@media (max-width: 767.98px) {
+  .pageWrapper { padding: 1.2rem 0.5rem; }
+  .formContainer { 
+    padding: 0.9rem;
+    max-width: 100vw;
+    border-radius: 0.7rem;}
+  .sectionTitleWrapper { margin-left: 0; }
+}
+@media (max-width: 575.98px) {
+  .pageWrapper { padding: 0.5rem 0.2rem; }
+  .formContainer { 
+    padding: 0.7rem 0.7rem; 
+    max-width: 100vw;
+    border-radius: 0.5rem;
+}
+  .saveButton { width: 100%; padding: 0.7rem 0; }
+}

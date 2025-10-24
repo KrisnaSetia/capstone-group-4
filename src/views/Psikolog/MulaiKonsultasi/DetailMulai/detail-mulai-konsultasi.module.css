@@ -1,0 +1,305 @@
+.pageWrapper {
+  background-color: #fafafa;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0;
+  max-width: 2000px;
+  margin: 0 auto;
+}
+.contentWrapper {
+  max-width: 1172px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+.headerSection {
+  margin-bottom: 2rem;
+}
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.backButton {
+  display: flex;
+  margin: 0 1rem;
+  padding: 0.8rem 1.5rem 0.8rem 1.2rem;
+  background-color: white;
+  border-color: grey;
+  align-items: center;
+  gap: 0.5rem;
+  color: black;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+}
+.backButton:hover {
+  background-color: #e2e2e2;
+  border-color: grey;
+  color: black;
+}
+
+.backButton:active {
+  background-color: #c4c4c4 !important;
+  border-color: grey !important;
+  color: black !important;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+  text-align: right;
+}
+.detailContainer {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-right: 1rem;
+  margin-bottom: 2rem;
+}
+.consultationHeader {
+  background: #ffff;
+  padding: 2rem 2rem 1.5rem 2rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.consultationTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+.submissionDate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+.dateLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.dateValue {
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+}
+.detailGrid {
+  padding: 2rem;
+}
+.detailRow {
+  display: flex;
+  margin-bottom: 2rem;
+}
+.detailRow:last-child {
+  margin-bottom: 0;
+}
+.detailItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.detailLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.detailValue {
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 500;
+}
+.keluhanText {
+  font-size: 0.95rem;
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+/* Tambahan untuk Zoom section */
+.zoomContainer {
+  margin-top: 2rem;
+  margin-right: 1rem;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem 2rem;
+}
+.zoomTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #22223b;
+  margin-bottom: 1.2rem;
+}
+.zoomLinkRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1.5rem;
+}
+
+.zoomDivider {
+  width: 71vw;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+  margin-left: -2.1vw;
+}
+.zoomContent {
+  /* Biar ada spasi setelah divider */
+  padding-top: 0.1rem;
+}
+
+.zoomContentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem;
+  /* Pastikan responsif aman */
+  flex-wrap: wrap;
+}
+
+.zoomLinkRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1.5rem;
+}
+
+.zoomLink {
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: underline;
+  font-size: 0.98rem;
+  word-break: break-all;
+}
+
+.zoomLinkArea {
+  display: flex;
+  flex-direction: column;
+  /* Jaga jarak antar label dan link */
+  gap: 0.3rem;
+}
+
+.zoomButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+.startBtn {
+  background-color: var(--blue-primary) !important;
+  border-color: #6366f1 !important;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 0.75rem 2rem;
+}
+.endBtn {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 0.75rem 2rem;
+}
+.endBtn:hover {
+  background-color: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: white !important;
+}
+/* Responsive: copy dari css sebelumnya */
+@media (max-width: 768px) {
+  .contentWrapper {
+    padding: 1.5rem 1rem;
+  }
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .pageTitle {
+    font-size: 1.25rem;
+    text-align: left;
+  }
+  .consultationHeader {
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+  }
+  .consultationTitle {
+    font-size: 1.1rem;
+  }
+  .detailGrid {
+    padding: 1.5rem;
+  }
+  .detailRow {
+    margin-bottom: 1.5rem;
+  }
+  .zoomContainer {
+    padding: 1rem 1rem;
+  }
+  .zoomButtons {
+    flex-direction: column;
+  }
+  .startBtn,
+  .endBtn {
+    width: 100%;
+    padding: 0.875rem 1rem;
+  }
+}
+@media (max-width: 480px) {
+  .contentWrapper {
+    padding: 1rem 0.75rem;
+  }
+  .headerContent {
+    gap: 0.5rem;
+  }
+  .pageTitle {
+    font-size: 1.1rem;
+  }
+  .consultationHeader {
+    padding: 1rem;
+  }
+  .consultationTitle {
+    font-size: 1rem;
+  }
+  .detailGrid {
+    padding: 1rem;
+  }
+  .detailRow {
+    margin-bottom: 1.25rem;
+  }
+  .zoomContainer {
+    padding: 0.7rem 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .zoomButtons {
+    flex-direction: column;
+    justify-content: stretch;
+    align-items: stretch;
+    padding-top: 1rem;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .zoomDivider {
+    margin-left: -1rem; /* Sesuaikan dengan padding container di mobile */
+    margin-right: -1rem;
+  }
+}
+@media (max-width: 480px) {
+  .zoomDivider {
+    margin-left: -0.7rem;
+    margin-right: -0.7rem;
+  }
+}

@@ -1,0 +1,218 @@
+.pageWrapper {
+  background-color: #fafafa;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0;
+  max-width: 2000px;
+  margin: 0 auto;
+}
+
+.contentWrapper {
+  max-width: 1172px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+
+.headerSection {
+  margin-bottom: 2rem;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.backButton {
+  display: flex;
+  margin: 0;
+  padding: 0.8rem 1.5rem 0.8rem 1.2rem;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  align-items: center;
+  gap: 0.5rem;
+  color: black;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+
+.backButton:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+  color: black;
+}
+
+.backButton:active {
+  background-color: #e5e7eb !important;
+  border-color: #6b7280 !important;
+  color: black !important;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+  text-align: right;
+}
+
+.detailContainer {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.consultationHeader {
+  background: #ffff;
+  padding: 2rem;
+  border-bottom: none;
+}
+
+.consultationTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1.5rem 0;
+}
+
+.formGroup {
+  margin-bottom: 2rem;
+}
+
+.textArea {
+  width: 100%;
+  min-height: 200px;
+  padding: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.textArea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.textArea::placeholder {
+  color: #9ca3af;
+}
+
+.buttonContainer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.konfirmasiButton {
+  background-color: var(--blue-primary);
+  border: none;
+  color: white;
+  padding: 0.8rem 2rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.konfirmasiButton:hover:not(:disabled) {
+  background-color: var(--blue-primary);
+}
+
+.konfirmasiButton:active:not(:disabled) { 
+  background-color: #36507f !important;
+}
+
+
+.konfirmasiButton:disabled {
+  background-color: #5378bc !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .contentWrapper {
+    padding: 1.5rem 1rem;
+  }
+  
+  .headerContent {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .pageTitle {
+    text-align: center;
+    font-size: 1.25rem;
+  }
+  
+  .backButton {
+    align-self: flex-start;
+    margin: 0;
+  }
+  
+  .consultationHeader {
+    padding: 1.5rem;
+  }
+  
+  .consultationTitle {
+    font-size: 1.1rem;
+  }
+  
+  .textArea {
+    min-height: 150px;
+    font-size: 0.9rem;
+  }
+  
+  .konfirmasiButton {
+    width: 100%;
+    padding: 1rem 2rem;
+  }
+  
+  .buttonContainer {
+    justify-content: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .contentWrapper {
+    padding: 1rem 0.75rem;
+  }
+  
+  .consultationHeader {
+    padding: 1rem;
+  }
+  
+  .pageTitle {
+    font-size: 1.1rem;
+  }
+  
+  .consultationTitle {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .textArea {
+    min-height: 120px;
+    padding: 0.75rem;
+  }
+  
+  .backButton {
+    padding: 0.6rem 1rem 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+}

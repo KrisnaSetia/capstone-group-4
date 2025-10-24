@@ -1,0 +1,122 @@
+[
+{
+  "username": "dr. Budi Santoso, S.Psi., M.Psi.",
+  "email": "budisantoso@psikolog.com",
+  "password": "budi123",
+  "usia": 35,
+  "jenis_kelamin": "L",
+  "nomor_sertifikasi": "PSI-2024-001",
+  "kuota_harian": 3,
+  "rating": 4.8,
+  "deskripsi": "Psikolog klinis dengan pengalaman 10 tahun dalam mengatasi permasalahan kesehatan mental",
+  "url_foto":"/assets/foto-psikolog/budi-santoso.png"
+},
+{
+  "username": "dr. Siti Aminah, S.Psi., M.Psi.",
+  "email": "sitiaminah@psikolog.com",
+  "password": "siti123",
+  "usia": 38,
+  "jenis_kelamin": "P",
+  "nomor_sertifikasi": "PSI-2024-002",
+  "kuota_harian": 3,
+  "rating": 4.6,
+  "deskripsi": "Psikolog anak dan remaja yang berfokus pada gangguan belajar dan motorik",
+  "url_foto":"/assets/foto-psikolog/siti-aminah.png"
+},
+{
+  "username": "dr. Ahmad Perdana, S.Psi., M.Psi.",
+  "email": "ahmadperdana@psikolog.com",
+  "password": "ahmad123",
+  "usia": 30,
+  "jenis_kelamin": "L",
+  "nomor_sertifikasi": "PSI-2024-003",
+  "kuota_harian": 3,
+  "rating": 4.5,
+  "deskripsi": "Konselor yang ahli dalam menangani permasalahan anak muda dan kegiatan perkuliahan",
+  "url_foto":"/assets/foto-psikolog/ahmad-perdana.png"
+},
+{
+  "username": "dr. Rina Wulandari, S.Psi.",
+  "email": "rinawulandari@psikolog.com",
+  "password": "rina123",
+  "usia": 29,
+  "jenis_kelamin": "P",
+  "nomor_sertifikasi": "PSI-2024-004",
+  "kuota_harian": 3,
+  "rating": 4.2,
+  "deskripsi": "Konselor muda yang ahli dalam menangani kesendirian dan kecemasan pada anak muda",
+  "url_foto":"/assets/foto-psikolog/rina-wulandari.png"
+},
+{
+  "username": "dr. Bagus Wijaya, S.Psi., M.Psi.",
+  "email": "baguswijaya@psikolog.com",
+  "password": "bagus123",
+  "usia": 38,
+  "jenis_kelamin": "L",
+  "nomor_sertifikasi": "PSI-2024-005",
+  "kuota_harian": 3,
+  "rating": 4.8,
+  "deskripsi": "Spesialis psikolog yang ahli dalam membantu pengembangan spasial dan mengarahkan keprofesian tingkat lanjut",
+  "url_foto":"/assets/foto-psikolog/rina-wulandari.png"
+},
+{
+  "username": "dr. Nabila Rahma, S.Psi., M.Psi.",
+  "email": "nabilarahma@psikolog.com",
+  "password": "nabila123",
+  "usia": 33,
+  "jenis_kelamin": "P",
+  "nomor_sertifikasi": "PSI-2024-006",
+  "kuota_harian": 4,
+  "rating": 4.9,
+  "deskripsi": "Membantu remaja mengatasi luka batin dan membimbing menuju potensi karier yang tepat.",
+  "url_foto": "/assets/foto-psikolog/nabila-rahma.png"
+},
+{
+  "username": "dr. Rafi Nurhadi, S.Psi., M.Psi.",
+  "email": "rafinurhadi@psikolog.com",
+  "password": "rafi123",
+  "usia": 36,
+  "jenis_kelamin": "L",
+  "nomor_sertifikasi": "PSI-2024-007",
+  "kuota_harian": 3,
+  "rating": 4.7,
+  "deskripsi": "Fokus pada healing emosional remaja serta pemetaan bakat untuk karier masa depan.",
+  "url_foto": "/assets/foto-psikolog/rafi-nurhadi.png"
+},
+{
+  "username": "dr. Intan Meilani, S.Psi., M.Psi.",
+  "email": "intanmeilani@psikolog.com",
+  "password": "intan123",
+  "usia": 31,
+  "jenis_kelamin": "P",
+  "nomor_sertifikasi": "PSI-2024-008",
+  "kuota_harian": 5,
+  "rating": 4.8,
+  "deskripsi": "Ahli dalam membangun rasa percaya diri remaja yang mengalami trauma dan mengarahkan karier yang sesuai.",
+  "url_foto": "/assets/foto-psikolog/intan-meilani.png"
+},
+{
+  "username": "dr. Galang Prasetyo, S.Psi., M.Psi.",
+  "email": "galangprasetyo@psikolog.com",
+  "password": "galang123",
+  "usia": 38,
+  "jenis_kelamin": "L",
+  "nomor_sertifikasi": "PSI-2024-009",
+  "kuota_harian": 4,
+  "rating": 4.6,
+  "deskripsi": "Menangani pemulihan luka psikologis remaja dan memotivasi dalam membangun tujuan karier.",
+  "url_foto": "/assets/foto-psikolog/galang-prasetyo.png"
+},
+{
+  "username": "dr. Shafa Kamila, S.Psi., M.Psi.",
+  "email": "shafakamila@psikolog.com",
+  "password": "shafa123",
+  "usia": 34,
+  "jenis_kelamin": "P",
+  "nomor_sertifikasi": "PSI-2024-010",
+  "kuota_harian": 3,
+  "rating": 4.9,
+  "deskripsi": "Spesialis dalam pemulihan emosi remaja pasca-trauma dan pemberdayaan karier di usia muda.",
+  "url_foto": "/assets/foto-psikolog/shafa-kamila.png"
+}
+]

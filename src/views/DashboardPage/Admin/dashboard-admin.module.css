@@ -34,6 +34,7 @@
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
   box-sizing: border-box;
   max-width: 1200px;
   margin-left: auto;
@@ -54,6 +55,10 @@
   margin-bottom: 2rem;
   text-align: left;
   line-height: 1.5;
+}
+
+.cardRow {
+  row-gap: 1rem;
 }
 
 .cardBox {
@@ -98,9 +103,10 @@
   flex-grow: 1;
 }
 
+/* Tombol: warna #373E3C */
 .primaryButton {
-  background-color: #ffd680; /* Warna normal */
-  color: black;
+  background-color: #373e3c;
+  color: #ffffff;
   border: none;
   width: 100%;
   font-weight: 500;
@@ -111,18 +117,17 @@
 }
 
 .primaryButton:hover {
-  background: #ffc04c; /* Warna saat di-hover */
+  background-color: #2b312f;
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .primaryButton:active {
-  background-color: #ffa500 !important; /* Warna saat aktif/ditekan */
-  transform: translateY(
-    0
-  ); /* Mengembalikan posisi tombol ke semula saat aktif */
-  box-shadow: none; /* Menghilangkan shadow saat aktif */
+  background-color: #1f2422 !important;
+  transform: translateY(0);
+  box-shadow: none;
 }
+
 .fadeInSection {
   opacity: 0;
   transform: translateY(20px);
@@ -135,6 +140,7 @@
   transform: none;
 }
 
+/* Responsive */
 @media (max-width: 991.98px) {
   .pageWrapper {
     padding: 2rem 1.5rem;

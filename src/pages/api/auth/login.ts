@@ -11,7 +11,7 @@ interface User {
   username: string;
   email: string;
   password: string;
-  roles: number; // 0 = psikolog, 1 = mahasiswa
+  roles: number; // 0 = psikolog, 1 = mahasiswa, 2 = admin
 }
 
 interface LoginResponse {
@@ -120,6 +120,9 @@ export default async function handler(
         } else if (user.roles === 0) {
           // Psikolog (roles = 0)
           redirectUrl = `/psikolog/beranda`;
+        } else if (user.roles === 2) {
+          // Admin (roles = 2)
+          redirectUrl = `/admin/beranda`;
         } else {
           // Role tidak dikenali
           return res.status(400).json({ message: "Role user tidak valid" });

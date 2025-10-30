@@ -12,5 +12,5 @@ export const getServerSideProps = withAuthSSR(
 );
 
 export default function PsikologDashboardPage({ user }: { user: AuthUser }) {
-  return <DashboardAdmin />;
+  return <DashboardAdmin user={user} />;
 }

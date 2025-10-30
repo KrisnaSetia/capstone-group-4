@@ -1,0 +1,77 @@
+.pageWrapper {
+  background-color: #fafafa;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.contentWrapper {
+  max-width: 1172px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+
+.sectionTitleWrapper {
+  margin-bottom: 1.5rem;
+}
+
+.pageTitle {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.formContainer {
+  background: #fff;
+  border: 1px solid rgb(223, 223, 223);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.inputDate {
+  width: fit-content;
+  max-width: 280px;
+  padding: 0.65rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: #fff;
+  margin-bottom: 1rem;
+  font-family: "Inter", sans-serif;
+}
+
+.tanggalTerpilih {
+  font-weight: 500;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: #374151;
+}
+
+.jadwalLabel {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+}
+
+.subHeader {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #374151;
+  margin-top: 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.infoText {
+  font-size: 0.95rem;
+  color: gray;
+  margin-bottom: 1rem;
+}
+
+.icon {
+  color: #5378bc;
+}

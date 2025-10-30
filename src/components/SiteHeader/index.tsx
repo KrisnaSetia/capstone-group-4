@@ -32,7 +32,7 @@ const featureKeywordTitles: { [keyword: string]: string } = {
   editprofile: "Edit Profil",
   lagutenang: "Lagu Tenang",
   Jadwal: "Jadwal",
-  manajemenpsikolog: "Manajemen Psiolog",
+  manajemenpsikolog: "Manajemen Psikolog",
 };
 
 const sectionTitles: { [key: string]: string } = {

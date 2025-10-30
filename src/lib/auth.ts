@@ -14,11 +14,13 @@ export interface AuthUser {
 export const ROLES = {
   PSIKOLOG: 0,
   MAHASISWA: 1,
+  ADMIN: 2,
 } as const;
 
 export const ROLE_NAMES: Record<number, string> = {
   [ROLES.PSIKOLOG]: "Psikolog",
   [ROLES.MAHASISWA]: "Mahasiswa",
+  [ROLES.ADMIN]: "Admin",
 };
 
 export function getUserRoleName(roles: number): string {
@@ -54,10 +56,11 @@ export function getUserFromRequest(req: NextApiRequest): AuthUser | null {
 export function hasAccessToResource(
   user: AuthUser,
   resourceUserId: number,
-  resourceType: "mahasiswa" | "psikolog"
+  resourceType: "mahasiswa" | "psikolog" | "admin"
 ): boolean {
   if (resourceType === "mahasiswa" && user.roles !== ROLES.MAHASISWA) return false;
   if (resourceType === "psikolog" && user.roles !== ROLES.PSIKOLOG) return false;
+  if (resourceType === "admin" && user.roles !== ROLES.ADMIN) return false;
   return user.userId === resourceUserId;
 }
 
@@ -65,7 +68,7 @@ export function hasAccessToResource(
 export function validateApiAccess(
   req: NextApiRequest,
   resourceUserId: number,
-  resourceType: "mahasiswa" | "psikolog"
+  resourceType: "mahasiswa" | "psikolog" | "admin"
 ): {
   isValid: boolean;
   user: AuthUser | null;
@@ -180,5 +183,6 @@ export function logout(): void {
 export function getRedirectUrl(roles: number): string {
   if (roles === ROLES.MAHASISWA) return "/mahasiswa/beranda";
   if (roles === ROLES.PSIKOLOG) return "/psikolog/beranda";
+  if (roles === ROLES.ADMIN) return "/admin/beranda";
   return "/auth//signin";
 }

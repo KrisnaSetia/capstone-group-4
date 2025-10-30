@@ -1,3 +1,4 @@
+/* ----- Wrapper ----- */
 .pageWrapper {
   background-color: #fafafa;
   min-height: 100vh;
@@ -20,33 +21,16 @@
   color: #333;
 }
 
+/* ----- Card Konten ----- */
 .formContainer {
   background: #fff;
-  border: 1px solid rgb(223, 223, 223);
+  border: 1px solid #e5e7eb;
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.inputDate {
-  width: fit-content;
-  max-width: 280px;
-  padding: 0.65rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 1rem;
-  background-color: #fff;
-  margin-bottom: 1rem;
-  font-family: "Inter", sans-serif;
-}
-
-.tanggalTerpilih {
-  font-weight: 500;
-  margin-bottom: 1rem;
-  font-size: 1rem;
-  color: #374151;
-}
-
+/* ----- Tanggal ----- */
 .jadwalLabel {
   font-weight: 600;
   font-size: 1rem;
@@ -57,21 +41,177 @@
   color: #374151;
 }
 
+.inputDate {
+  width: fit-content;
+  max-width: 280px;
+  padding: 0.65rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: #fff;
+  margin-bottom: 1.25rem;
+  font-family: "Inter", sans-serif;
+}
+
+.icon {
+  color: #5378bc;
+}
+
+/* ----- Sub header ----- */
 .subHeader {
   font-size: 0.95rem;
   font-weight: 600;
   text-transform: uppercase;
   color: #374151;
-  margin-top: 1rem;
+  margin-top: 0.25rem;
   margin-bottom: 0.6rem;
 }
 
 .infoText {
   font-size: 0.95rem;
   color: gray;
-  margin-bottom: 1rem;
+  margin: 0.5rem 0 1rem 0;
 }
 
-.icon {
-  color: #5378bc;
+/* ----- List Peserta ----- */
+.listWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 0.75rem;
+}
+
+.pesertaItem {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pesertaLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Badge ikon orang */
+.iconBox {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #ffebba; /* kuning lembut */
+  color: #000000;       /* ikon Users jadi hitam */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pesertaText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.itemTitle {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.itemSub {
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;       /* tambah padding kanan-kiri */
+  border-radius: 9999px;
+  background: #E9F9EF;
+  border: 1px solid #CFF1DD;
+  color: #16A34A;
+  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1;
+  width: fit-content;       /* biar proporsional, gak full */
+}
+
+.statusIcon {
+  stroke: currentColor;          /* ikut warna hijau di atas */
+}
+
+.statusText {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* ----- Pagination ----- */
+.pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.pagerBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  color: #6b7280;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagerBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagerText:hover {
+  background: #f3f4f6;
+}
+
+.pageNum {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.pageNum:hover {
+  background: #f3f4f6;
+}
+
+/* Halaman aktif: kuning seperti screenshot */
+.activePage {
+  background: #ffebba;
+  border-color: #ffebba;
+  color: #111111;
+  font-weight: 700;
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 768px) {
+  .contentWrapper {
+    padding: 1.5rem 1rem;
+  }
+  .pagination {
+    justify-content: center;
+  }
 }

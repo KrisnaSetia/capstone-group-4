@@ -1,85 +1,114 @@
-.paginationContainer {
-  max-width: 1200px;
-  margin: 2rem auto 0 auto;
-  padding: 0 2.7rem;
+/* Pagination Wrapper */
+.paginationWrapper {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
 }
 
-.customPagination .page-item:not(.active):not(.disabled) .page-link {
+/* Arrow Buttons (Previous/Next) */
+.arrowButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
   background-color: transparent;
   border: none;
+  border-radius: 8px;
   color: #6b7280;
+  font-size: 0.875rem;
   font-weight: 500;
-  margin: 0 4px;
-  border-radius: 12px;
-  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.customPagination .page-item:not(.disabled) > .page-link[aria-label="Previous"],
-.customPagination .page-item:not(.disabled) > .page-link[aria-label="Next"] {
-  color: #212529 !important;
+.arrowButton:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  color: #111827;
 }
 
-.customPagination .page-item.active .page-link {
-  background-color: var(--blue-primary) !important;
-  color: white !important;
-  font-weight: 600;
-  border-radius: 12px !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.customPagination .page-item:not(.active):not(.disabled) .page-link:hover {
-  background-color: var(--blue-primary);
-  color: white;
-}
-
-.customPagination .page-item.disabled .page-link {
-  color: #adb5bd !important;
-  background-color: transparent !important;
-  opacity: 0.6 !important;
+.arrowButton:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: none !important;
-  border-color: transparent !important;
 }
 
-.customPagination {
-  --bs-pagination-padding-x: 0.75rem;
-  --bs-pagination-padding-y: 0.375rem;
-  --bs-pagination-font-size: 1rem;
-  --bs-pagination-color: #6b7280;
-  --bs-pagination-bg: transparent;
-  --bs-pagination-border-width: 0;
-  --bs-pagination-border-radius: 12px;
-  --bs-pagination-hover-color: white;
-  --bs-pagination-hover-bg: black;
-  --bs-pagination-hover-border-color: transparent;
-  --bs-pagination-focus-color: white;
-  --bs-pagination-focus-bg: black;
-  --bs-pagination-focus-box-shadow: none;
-  --bs-pagination-active-color: white;
-  --bs-pagination-active-bg: black;
-  --bs-pagination-active-border-color: transparent;
-  --bs-pagination-disabled-color: #adb5bd;
-  --bs-pagination-disabled-bg: transparent;
-  --bs-pagination-disabled-border-color: transparent;
-}
-/* @media (max-width: 768px) {
-  .customPagination .page-link {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.875rem;
-  }
+.arrowText {
+  font-size: 0.875rem;
 }
 
-@media (max-width: 480px) {
-  .paginationContainer {
-    margin-top: 1.5rem;
+/* Page Numbers Container */
+.pageNumbers {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Individual Page Number Button */
+.pageNumber {
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageNumber:hover:not(:disabled):not(.active) {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.pageNumber:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Active Page - Warna Sidebar Admin (#373e3c) */
+.pageNumber.active {
+  background-color: #373e3c;
+  border-color: #373e3c;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* Ellipsis (...) */
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  user-select: none;
+}
+
+/* Responsive untuk mobile */
+@media (max-width: 640px) {
+  .paginationWrapper {
+    gap: 0.25rem;
   }
 
-  .customPagination .page-link {
-    padding: 0.25rem 0.375rem;
-    font-size: 0.8rem;
-    margin: 0 0.0625rem;
+  .arrowText {
+    display: none;
   }
-} */
+
+  .arrowButton {
+    padding: 0.5rem;
+  }
+
+  .pageNumber {
+    min-width: 2rem;
+    height: 2rem;
+    font-size: 0.8125rem;
+  }
+}

@@ -35,6 +35,7 @@ export default function DetailKonsulOfflineAdminView() {
 
   const [data, setData] = useState<DetailPesanan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     if (!id) return;
@@ -43,53 +44,56 @@ export default function DetailKonsulOfflineAdminView() {
 
     (async () => {
       try {
-        // Endpoint admin. Ganti sesuai API-mu.
-        const res = await fetch(`/api/admin/konsultasioffline/${encodeURIComponent(safeId)}`);
-        if (res.ok) {
-          const json = (await res.json()) as DetailPesanan;
-          setData(json);
-        } else {
-          // fallback dummy agar halaman tetap hidup saat integrasi awal
-          setData({
-            id: Number(safeId),
-            namaPsikolog: "SHCC ITS",
-            tanggalPengajuan: "09 Juni 2025 pukul 14.30",
-            jadwalKonsultasi: "Selasa, 17 Juni 2025",
-            sesiKonsultasi: "Sesi 2 (12.00 – 13.30)",
-            lokasi: "Lantai 2 Kantin Pusat ITS",
-            keluhan: "alfredo lagi topi pancing",
-            status: "Terdaftar",
-          });
+        setLoading(true);
+        setError("");
+        
+        const res = await fetch(`/api/admin/detailkonsultasioffline/${encodeURIComponent(safeId)}`);
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Gagal memuat data");
         }
-      } catch {
-        // fallback dummy jika network error
-        setData({
-          id: Number(safeId),
-          namaPsikolog: "SHCC ITS",
-          tanggalPengajuan: "09 Juni 2025 pukul 14.30",
-          jadwalKonsultasi: "Selasa, 17 Juni 2025",
-          sesiKonsultasi: "Sesi 2 (12.00 – 13.30)",
-          lokasi: "Lantai 2 Kantin Pusat ITS",
-          keluhan: "alfredo lagi topi pancing",
-          status: "Terdaftar",
-        });
+        
+        const json = (await res.json()) as DetailPesanan;
+        setData(json);
+      } catch (err) {
+        console.error("Error fetching detail:", err);
+        setError(err instanceof Error ? err.message : "Terjadi kesalahan");
       } finally {
         setLoading(false);
       }
     })();
   }, [id]);
 
-  const handleBack = () => router.back();
+  const handleBack = () => router.push("/admin/konsultasioffline");
 
-  if (loading) return <Spinner />;
-  if (!data) return <div style={{ padding: "2rem" }}>Data tidak ditemukan.</div>;
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <Spinner />
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <DashboardLayout>
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+          <p style={{ color: "#dc2626", marginBottom: "1rem" }}>
+            {error || "Data tidak ditemukan"}
+          </p>
+          <Button onClick={handleBack}>Kembali</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const badgeStyle = STATUS_STYLE[data.status] ?? { color: "#111827", bg: "#E5E7EB" };
 
   return (
     <>
       <Head>
-        <title>Konsultasi Offline | ITS-OK</title>
+        <title>Detail Konsultasi Offline | ITS-OK</title>
         <meta name="description" content="Detail pesanan konsultasi offline - Admin" />
         <link rel="icon" href="/logo/favicon.png" />
       </Head>

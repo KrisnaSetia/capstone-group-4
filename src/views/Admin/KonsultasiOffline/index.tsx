@@ -1,14 +1,15 @@
 import Head from "next/head";
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import DashboardLayout from "@/layouts/dashboard-admin";
 import styles from "./admin-konsuloffline.module.css";
+import PaginationComponent from "@/components/Pagination/Admin";
 import {
   CalendarDays,
   CheckCircle,
   Users,
-  ChevronLeft,
-  ChevronRight,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 
 type PesertaItem = {
@@ -19,30 +20,15 @@ type PesertaItem = {
   status: "terdaftar" | "pending" | "batal";
 };
 
-// --- Dummy data (gantikan dengan hasil fetch API nanti) ---
-const DUMMY: PesertaItem[] = [
-  {
-    id: 1,
-    judul: "Konsultasi Offline : SHCC ITS",
-    tanggal: "2025-12-12",
-    sesiLabel: "Sesi 1 (10.00 – 11.30)",
-    status: "terdaftar",
-  },
-  {
-    id: 2,
-    judul: "Konsultasi Offline : SHCC ITS",
-    tanggal: "2025-12-12",
-    sesiLabel: "Sesi 2 (12.00 – 13.30)",
-    status: "terdaftar",
-  },
-  {
-    id: 3,
-    judul: "Konsultasi Offline : SHCC ITS",
-    tanggal: "2025-12-12",
-    sesiLabel: "Sesi 3 (12.00 – 13.30)",
-    status: "terdaftar",
-  },
-];
+type ApiResponse = {
+  meta: {
+    date: string;
+    count: number;
+    limit: number;
+    offset: number;
+  };
+  data: PesertaItem[];
+};
 
 const formatTanggalLong = (iso: string) =>
   new Date(iso).toLocaleDateString("id-ID", {
@@ -53,28 +39,55 @@ const formatTanggalLong = (iso: string) =>
 
 export default function KonsultasiOfflineAdminPage() {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<string>("2025-12-12");
-  const [page, setPage] = useState<number>(1);
-  const perPage = 3;
-
-  // filter berdasarkan tanggal
-  const filtered = useMemo(
-    () => DUMMY.filter((i) => i.tanggal === selectedDate),
-    [selectedDate]
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
   );
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<PesertaItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  // const [totalPages, setTotalPages] = useState<number>(1);
+  const perPage = 4;
+  const totalPages = Math.ceil(data.length / perPage);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const startIdx = (page - 1) * perPage;
-  const pageItems = filtered.slice(startIdx, startIdx + perPage);
+  // Fetch data dari API
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError("");
 
-  const go = (p: number) => {
-    if (p < 1 || p > totalPages) return;
-    setPage(p);
-  };
+      try {
+        const offset = (page - 1) * perPage;
+        const response = await fetch(
+          `/api/admin/konsultasioffline?date=${selectedDate}&limit=${perPage}&offset=${offset}`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Gagal memuat data");
+        }
+
+        const result: ApiResponse = await response.json();
+        setData(result.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedDate, page, perPage]);
+
 
   const handleClickItem = (id: number) => {
-    // navigasi ke halaman detail
     router.push(`/admin/konsultasioffline/detailkonsultasi/${id}`);
+  };
+
+  const handleDateChange = (newDate: string) => {
+    setSelectedDate(newDate);
+    setPage(1); // Reset ke halaman pertama
   };
 
   return (
@@ -108,10 +121,7 @@ export default function KonsultasiOfflineAdminPage() {
                 type="date"
                 className={styles.inputDate}
                 value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => handleDateChange(e.target.value)}
               />
 
               {/* Daftar peserta */}
@@ -120,19 +130,49 @@ export default function KonsultasiOfflineAdminPage() {
               </h3>
 
               <div className={styles.listWrapper}>
-                {pageItems.length === 0 ? (
+                {/* Loading state */}
+                {loading && (
+                  <div
+                    className={styles.infoText}
+                    style={{ textAlign: "center" }}
+                  >
+                    <Loader2
+                      size={24}
+                      className="animate-spin"
+                      style={{ display: "inline-block", marginRight: "8px" }}
+                    />
+                    Memuat data...
+                  </div>
+                )}
+
+                {/* Error state */}
+                {error && !loading && (
+                  <div className={styles.infoText} style={{ color: "#dc2626" }}>
+                    ⚠️ {error}
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {!loading && !error && data.length === 0 && (
                   <p className={styles.infoText}>
                     Tidak ada pesanan untuk tanggal ini.
                   </p>
-                ) : (
-                  pageItems.map((item) => (
+                )}
+
+                {/* Data list */}
+                {!loading &&
+                  !error &&
+                  data.length > 0 &&
+                  data.map((item) => (
                     <div
                       key={item.id}
                       className={styles.pesertaItem}
                       onClick={() => handleClickItem(item.id)}
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => e.key === "Enter" && handleClickItem(item.id)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handleClickItem(item.id)
+                      }
                       aria-label={`Buka detail ${item.judul} ${item.sesiLabel}`}
                     >
                       <div className={styles.pesertaLeft}>
@@ -147,58 +187,46 @@ export default function KonsultasiOfflineAdminPage() {
                           </div>
                           <div
                             className={styles.statusBadge}
+                            data-status={item.status}
                             role="status"
-                            aria-label="Terdaftar"
+                            aria-label={
+                              item.status === "terdaftar"
+                                ? "Terdaftar"
+                                : "Dibatalkan"
+                            }
                           >
-                            <CheckCircle
-                              size={16}
-                              className={styles.statusIcon}
-                            />
-                            <span>Terdaftar</span>
+                            {item.status === "terdaftar" ? (
+                              <>
+                                <CheckCircle
+                                  size={16}
+                                  className={styles.statusIcon}
+                                />
+                                <span>Terdaftar</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle
+                                  size={16}
+                                  className={styles.statusIcon}
+                                />
+                                <span>Dibatalkan</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
+                  ))}
               </div>
 
               {/* Pagination */}
-              {totalPages > 1 && (
-                <div className={styles.pagination}>
-                  <button
-                    className={`${styles.pagerBtn} ${styles.pagerText}`}
-                    onClick={() => go(page - 1)}
-                    disabled={page === 1}
-                    aria-label="Previous page"
-                  >
-                    <ChevronLeft size={16} /> Previous
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (n) => (
-                      <button
-                        key={n}
-                        className={`${styles.pageNum} ${
-                          n === page ? styles.activePage : ""
-                        }`}
-                        onClick={() => go(n)}
-                        aria-current={n === page ? "page" : undefined}
-                      >
-                        {n}
-                      </button>
-                    )
-                  )}
-
-                  <button
-                    className={`${styles.pagerBtn} ${styles.pagerText}`}
-                    onClick={() => go(page + 1)}
-                    disabled={page === totalPages}
-                    aria-label="Next page"
-                  >
-                    Next <ChevronRight size={16} />
-                  </button>
-                </div>
+              {!loading && data.length > 0 && (
+                <PaginationComponent
+                  currentPage={page}
+                  totalPages={totalPages}
+                  isLoading={loading}
+                  onPageChange={(p: number) => setPage(p)}
+                />
               )}
             </div>
           </div>

@@ -43,23 +43,29 @@ export default function KonsultasiOfflineAdminPage() {
     new Date().toISOString().split("T")[0]
   );
   const [page, setPage] = useState(1);
-  const [data, setData] = useState<PesertaItem[]>([]);
+  const [allData, setAllData] = useState<PesertaItem[]>([]); // Semua data
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  // const [totalPages, setTotalPages] = useState<number>(1);
-  const perPage = 4;
-  const totalPages = Math.ceil(data.length / perPage);
+  
+  const itemsPerPage = 3; // 3 item per halaman
+  const totalPages = Math.ceil(allData.length / itemsPerPage);
+  
+  // Data untuk halaman saat ini
+  const currentPageData = allData.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
 
-  // Fetch data dari API
+  // Fetch semua data untuk tanggal yang dipilih
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError("");
 
       try {
-        const offset = (page - 1) * perPage;
+        // Fetch semua data (limit besar)
         const response = await fetch(
-          `/api/admin/konsultasioffline?date=${selectedDate}&limit=${perPage}&offset=${offset}`
+          `/api/admin/konsultasioffline?date=${selectedDate}&limit=100&offset=0`
         );
 
         if (!response.ok) {
@@ -68,18 +74,18 @@ export default function KonsultasiOfflineAdminPage() {
         }
 
         const result: ApiResponse = await response.json();
-        setData(result.data);
+        setAllData(result.data);
+        setPage(1); // Reset ke halaman 1 saat tanggal berubah
       } catch (err) {
         setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-        setData([]);
+        setAllData([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [selectedDate, page, perPage]);
-
+  }, [selectedDate]);
 
   const handleClickItem = (id: number) => {
     router.push(`/admin/konsultasioffline/detailkonsultasi/${id}`);
@@ -87,7 +93,10 @@ export default function KonsultasiOfflineAdminPage() {
 
   const handleDateChange = (newDate: string) => {
     setSelectedDate(newDate);
-    setPage(1); // Reset ke halaman pertama
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
   };
 
   return (
@@ -153,17 +162,17 @@ export default function KonsultasiOfflineAdminPage() {
                 )}
 
                 {/* Empty state */}
-                {!loading && !error && data.length === 0 && (
+                {!loading && !error && allData.length === 0 && (
                   <p className={styles.infoText}>
                     Tidak ada pesanan untuk tanggal ini.
                   </p>
                 )}
 
-                {/* Data list */}
+                {/* Data list - Hanya tampilkan data halaman saat ini */}
                 {!loading &&
                   !error &&
-                  data.length > 0 &&
-                  data.map((item) => (
+                  currentPageData.length > 0 &&
+                  currentPageData.map((item) => (
                     <div
                       key={item.id}
                       className={styles.pesertaItem}
@@ -219,13 +228,13 @@ export default function KonsultasiOfflineAdminPage() {
                   ))}
               </div>
 
-              {/* Pagination */}
-              {!loading && data.length > 0 && (
+              {/* Pagination - Hanya tampil jika ada data dan totalPages > 1 */}
+              {!loading && allData.length > 0 && totalPages > 1 && (
                 <PaginationComponent
                   currentPage={page}
                   totalPages={totalPages}
                   isLoading={loading}
-                  onPageChange={(p: number) => setPage(p)}
+                  onPageChange={handlePageChange}
                 />
               )}
             </div>

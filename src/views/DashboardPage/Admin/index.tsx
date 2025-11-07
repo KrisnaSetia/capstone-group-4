@@ -99,7 +99,7 @@ export default function DashboardAdmin({ user }: Props) {
                       <Button
                         variant="primary"
                         className={`${styles.primaryButton} mt-auto`}
-                        href="/admin/konsultasi-offline"
+                        href="/admin/konsultasioffline"
                       >
                         Lihat
                       </Button>
@@ -126,7 +126,7 @@ export default function DashboardAdmin({ user }: Props) {
                       <Button
                         variant="primary"
                         className={`${styles.primaryButton} mt-auto`}
-                        href="/admin/manajemen-psikolog"
+                        href="/admin/manajemenpsikolog"
                       >
                         Lihat
                       </Button>

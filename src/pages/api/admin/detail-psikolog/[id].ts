@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { RowDataPacket } from "mysql2";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,51 +21,53 @@ export default async function handler(
     return res.status(405).json({ message: "Method not allowed" });
   }
 
-  const db = await connectDatabase();
-
   try {
-    const [result]: RowDataPacket[] = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT 
-          p.id_psikolog,
-          u.username,
-          p.nomor_sertifikasi,
-          p.kuota_harian,
-          COALESCE(p.rating, 0) AS rating,
-          p.deskripsi,
-          p.url_foto
-        FROM psikolog p
-        INNER JOIN user u ON p.id_psikolog = u.id_user
-        WHERE p.id_psikolog = ?`,
-        [idPsikolog],
-        (err, result) => {
-          if (err) reject(err);
-          else resolve(result as RowDataPacket[]);
-        }
-      );
-    });
+    // Query Supabase untuk mendapatkan detail psikolog berdasarkan ID
+    const { data: results, error } = (await supabaseServer
+      .from("psikolog")
+      .select(
+        `
+        id_psikolog,
+        nomor_sertifikasi,
+        kuota_harian,
+        rating,
+        deskripsi,
+        url_foto,
+        user!inner (
+          username
+        )
+      `
+      )
+      .eq("id_psikolog", idPsikolog)
+      .single()) as { data: any; error: any }; // Mengambil single row
 
-    db.end();
+    if (error) {
+      // Jika error karena data tidak ditemukan
+      if (error.code === "PGRST116") {
+        return res.status(404).json({ message: "Psikolog tidak ditemukan" });
+      }
+      console.error("Supabase error:", error);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-    if (!result) {
+    if (!results) {
       return res.status(404).json({ message: "Psikolog tidak ditemukan" });
     }
 
     return res.status(200).json({
       success: true,
       data: {
-        id_psikolog: result.id_psikolog,
-        username: result.username,
-        nomor_sertifikasi: result.nomor_sertifikasi,
-        kuota_harian: result.kuota_harian,
-        rating: result.rating,
-        deskripsi: result.deskripsi,
-        url_foto: result.url_foto,
+        id_psikolog: results.id_psikolog,
+        username: results.user.username,
+        nomor_sertifikasi: results.nomor_sertifikasi,
+        kuota_harian: results.kuota_harian,
+        rating: results.rating ?? 0, // COALESCE equivalent
+        deskripsi: results.deskripsi,
+        url_foto: results.url_foto,
       },
     });
   } catch (err) {
-    console.error("Database error:", err);
-    db.end();
-    return res.status(500).json({ message: "Database error" });
+    console.error("Error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import bcrypt from "bcrypt";
 import "dotenv/config";
 
@@ -47,81 +47,80 @@ export default async function handler(
       return res.status(400).json({ message: "Password minimal 6 karakter" });
     }
 
-    const db = await connectDatabase();
+    // 🔹 1. Cek email sudah terdaftar atau belum
+    const { data: existingEmail, error: checkEmailError } = await supabaseServer
+      .from("user")
+      .select("id_user")
+      .eq("email", email)
+      .maybeSingle();
 
-    // Cek email sudah terdaftar
-    const checkEmailQuery = `SELECT email FROM user WHERE email = ?`;
-    db.query(checkEmailQuery, [email], async (error: any, results: any) => {
-      if (error) {
-        db.end();
-        console.error("Database error:", error);
-        return res.status(500).json({ message: "Database error" });
-      }
+    if (checkEmailError) {
+      console.error("Supabase check email error:", checkEmailError);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-      if (results.length > 0) {
-        db.end();
-        return res.status(400).json({ message: "Email sudah terdaftar" });
-      }
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email sudah terdaftar" });
+    }
 
-      // (Opsional) cek username unik juga
-      const checkUsernameQuery = `SELECT username FROM user WHERE username = ?`;
-      db.query(checkUsernameQuery, [username], async (e2: any, r2: any) => {
-        if (e2) {
-          db.end();
-          console.error("Database error:", e2);
-          return res.status(500).json({ message: "Database error" });
-        }
+    // 🔹 2. Cek username sudah dipakai atau belum
+    const { data: existingUsername, error: checkUsernameError } =
+      await supabaseServer
+        .from("user")
+        .select("id_user")
+        .eq("username", username)
+        .maybeSingle();
 
-        if (r2.length > 0) {
-          db.end();
-          return res.status(400).json({ message: "Username sudah digunakan" });
-        }
+    if (checkUsernameError) {
+      console.error("Supabase check username error:", checkUsernameError);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-        try {
-          const hashedPassword = await bcrypt.hash(password, 10);
+    if (existingUsername) {
+      return res.status(400).json({ message: "Username sudah digunakan" });
+    }
 
-          // Insert hanya ke tabel user
-          const insertUserQuery = `
-            INSERT INTO user (username, email, password, usia, jenis_kelamin, roles)
-            VALUES (?, ?, ?, NULL, NULL, 2)
-          `;
+    // 🔹 3. Hash password
+    let hashedPassword: string;
+    try {
+      hashedPassword = await bcrypt.hash(password, 10);
+    } catch (hashErr) {
+      console.error("Hashing error:", hashErr);
+      return res.status(500).json({ message: "Gagal mengenkripsi password" });
+    }
 
-          db.query(
-            insertUserQuery,
-            [username, email, hashedPassword],
-            (userErr: any, userResult: any) => {
-              db.end();
+    // 🔹 4. Insert ke tabel user (admin)
+    // Ingat: di schema kamu, usia & jenis_kelamin boleh null, roles = text.
+    const { data: insertedUser, error: insertUserError } = await supabaseServer
+      .from("user")
+      .insert({
+        username,
+        email,
+        password: hashedPassword,
+        usia: null,
+        jenis_kelamin: null,
+        roles: "2", // simpan sebagai text
+      })
+      .select("id_user, username, email, roles")
+      .single();
 
-              if (userErr) {
-                console.error("User insert error:", userErr);
-                return res
-                  .status(500)
-                  .json({ message: "Gagal mendaftarkan admin" });
-              }
+    if (insertUserError || !insertedUser) {
+      console.error("User insert error:", insertUserError);
+      return res.status(500).json({ message: "Gagal mendaftarkan admin" });
+    }
 
-              const userId = userResult.insertId;
+    const userId = insertedUser.id_user;
 
-              return res.status(201).json({
-                message: "Registrasi admin berhasil",
-                user: {
-                  id: userId,
-                  username,
-                  email,
-                  roles: 2,
-                },
-              });
-            }
-          );
-        } catch (hashErr) {
-          db.end();
-          console.error("Hashing error:", hashErr);
-          return res
-            .status(500)
-            .json({ message: "Gagal mengenkripsi password" });
-        }
-      });
+    return res.status(201).json({
+      message: "Registrasi admin berhasil",
+      user: {
+        id: userId,
+        username: insertedUser.username,
+        email: insertedUser.email,
+        roles: 2, // dikembalikan sebagai number ke frontend
+      },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Unexpected error:", err);
     return res.status(500).json({ message: "Server error" });
   }

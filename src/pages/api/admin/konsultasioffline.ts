@@ -1,14 +1,14 @@
-// file: src/pages/api/admin/konsultasi-offline.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
 
-type OfflineOrderRow = {
-  id_konsultasi: number;
-  tanggal_ymd: string; // hasil DATE(j.tanggal)
-  sesi: number; // 1 | 2 | 3
-  status: number; // 0/1/2/3 dari DB
-};
+// type OfflineOrderRow = {
+//   id_konsultasi: number;
+//   tanggal_ymd: string; // hasil DATE(j.tanggal)
+//   sesi: number; // 1 | 2 | 3
+//   status: number; // 0/1/2/3 dari DB
+// };
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,16 +18,19 @@ export default async function handler(
   if (!me || me.roles !== 2) {
     return res.status(401).json({ message: "Unauthorized" });
   }
+
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }
 
   const { date, limit, offset } = req.query;
+
   if (!date || typeof date !== "string") {
     return res
       .status(400)
       .json({ message: "Query ?date=YYYY-MM-DD wajib diisi." });
   }
+
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res
       .status(400)
@@ -36,6 +39,7 @@ export default async function handler(
 
   const lim = Number(limit ?? 50);
   const off = Number(offset ?? 0);
+
   if (
     Number.isNaN(lim) ||
     Number.isNaN(off) ||
@@ -48,43 +52,56 @@ export default async function handler(
       .json({ message: "Parameter pagination tidak valid." });
   }
 
-  const db = await connectDatabase();
+  try {
+    // Query Supabase dengan join dan filter
+    const { data: rows, error } = await supabaseServer
+      .from("konsultasi_offline")
+      .select(
+        `
+        id_konsultasi,
+        status,
+        jadwal_offline!inner (
+          tanggal,
+          sesi
+        )
+      `
+      )
+      .gte("jadwal_offline.tanggal", `${date}T00:00:00`)
+      .lt("jadwal_offline.tanggal", `${date}T23:59:59`)
+      .order("jadwal_offline(tanggal)", { ascending: true })
+      .order("jadwal_offline(sesi)", { ascending: true })
+      .order("id_konsultasi", { ascending: false })
+      .range(off, off + lim - 1);
 
-  // Ambil langsung DATE(j.tanggal) agar jadi "YYYY-MM-DD" di MySQL (hindari masalah zona waktu)
-  const sql = `
-    SELECT
-      ko.id_konsultasi,
-      DATE(j.tanggal) AS tanggal_ymd,
-      j.sesi,
-      ko.status
-    FROM konsultasi_offline ko
-    INNER JOIN jadwal_offline j ON ko.id_jadwal = j.id_jadwal
-    WHERE DATE(j.tanggal) = ?
-    ORDER BY j.tanggal ASC, j.sesi ASC, ko.id_konsultasi DESC
-    LIMIT ? OFFSET ?;
-  `;
-
-  db.query(sql, [date, lim, off], (err: unknown, rows: unknown) => {
-    db.end();
-
-    if (err) {
-      console.error("DB error:", err);
+    if (error) {
+      console.error("Supabase error:", error);
       return res.status(500).json({ message: "Database error" });
     }
 
-    const data = (rows as OfflineOrderRow[]).map((r) => ({
-      id: r.id_konsultasi,
-      judul: "Konsultasi Offline : SHCC ITS",
-      tanggal: r.tanggal_ymd, // sudah "YYYY-MM-DD"
-      sesiLabel: `Sesi ${r.sesi} (${getJamSesi(r.sesi).replace("-", "–")})`,
-      status: mapStatusToBadge(r.status), // "terdaftar" | "batal"
-    }));
+    // Transform data untuk match dengan format yang diharapkan
+    const data = (rows || []).map((r: any) => {
+      // Extract tanggal dari timestamp dan convert ke YYYY-MM-DD
+      const tanggalYmd = r.jadwal_offline.tanggal.split("T")[0];
+
+      return {
+        id: r.id_konsultasi,
+        judul: "Konsultasi Offline : SHCC ITS",
+        tanggal: tanggalYmd,
+        sesiLabel: `Sesi ${r.jadwal_offline.sesi} (${getJamSesi(
+          r.jadwal_offline.sesi
+        ).replace("-", "–")})`,
+        status: mapStatusToBadge(r.status),
+      };
+    });
 
     return res.status(200).json({
       meta: { date, count: data.length, limit: lim, offset: off },
-      data, // <-- langsung array PesertaItem
+      data,
     });
-  });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 }
 
 function getJamSesi(sesi: number): string {

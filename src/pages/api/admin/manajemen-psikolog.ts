@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
 
 type PsikologRow = {
@@ -26,36 +27,48 @@ export default async function handler(
     return res.status(405).json({ message: "Method not allowed" });
   }
 
-  const db = await connectDatabase();
+  try {
+    // Query Supabase dengan join ke tabel user
+    const { data: results, error } = await supabaseServer
+      .from("psikolog")
+      .select(
+        `
+        id_psikolog,
+        nomor_sertifikasi,
+        kuota_harian,
+        rating,
+        deskripsi,
+        url_foto,
+        user!inner (
+          username
+        )
+      `
+      )
+      .order("user(username)", { ascending: true });
 
-  const sql = `
-    SELECT 
-      p.id_psikolog,
-      u.username,
-      p.nomor_sertifikasi,
-      p.kuota_harian,
-      COALESCE(p.rating, 0) AS rating,
-      p.deskripsi,
-      p.url_foto
-    FROM psikolog p
-    INNER JOIN user u ON p.id_psikolog = u.id_user
-    ORDER BY u.username ASC
-  `;
-
-  db.query(sql, (err: unknown, results: unknown) => {
-    db.end();
-
-    if (err) {
-      console.error("Database error:", err);
+    if (error) {
+      console.error("Supabase error:", error);
       return res.status(500).json({ message: "Database error" });
     }
 
-    const data = results as PsikologRow[];
+    // Transform data untuk match dengan format yang diharapkan
+    const data: PsikologRow[] = (results || []).map((r: any) => ({
+      id_psikolog: r.id_psikolog,
+      username: r.user.username,
+      nomor_sertifikasi: r.nomor_sertifikasi,
+      kuota_harian: r.kuota_harian,
+      rating: r.rating ?? 0, // COALESCE equivalent
+      deskripsi: r.deskripsi,
+      url_foto: r.url_foto,
+    }));
 
     return res.status(200).json({
       success: true,
       count: data.length,
       data,
     });
-  });
+  } catch (err) {
+    console.error("Error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 }

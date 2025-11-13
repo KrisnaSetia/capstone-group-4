@@ -82,8 +82,19 @@ export default async function handler(
       return res.status(400).json({ message: "Usia harus diatas 18 tahun" });
     }
 
-    const validGender = ["L", "P", "Laki-laki", "Perempuan"];
-    if (!validGender.includes(jenis_kelamin)) {
+    // 🔁 Normalisasi & validasi gender
+    const rawGender = (jenis_kelamin || "").trim().toLowerCase();
+    let genderForDb: "L" | "P";
+
+    if (
+      rawGender === "l" ||
+      rawGender === "laki-laki" ||
+      rawGender === "laki laki"
+    ) {
+      genderForDb = "L";
+    } else if (rawGender === "p" || rawGender === "perempuan") {
+      genderForDb = "P";
+    } else {
       return res.status(400).json({ message: "Jenis kelamin tidak valid" });
     }
 
@@ -113,7 +124,6 @@ export default async function handler(
     }
 
     // 🔹 3. Insert ke tabel user
-    // Di schema Supabase kamu: usia & roles bertipe text, jadi kita cast ke string
     const { data: insertedUser, error: insertUserError } = await supabaseServer
       .from("user")
       .insert({
@@ -121,7 +131,7 @@ export default async function handler(
         email,
         password: hashedPassword,
         usia: String(usia),
-        jenis_kelamin,
+        jenis_kelamin: genderForDb, // ⬅️ hanya "L" atau "P" yang disimpan
         roles: "1", // 1 = mahasiswa (disimpan sebagai text)
       })
       .select("id_user, username, email, roles")
@@ -144,8 +154,6 @@ export default async function handler(
 
     if (insertMahasiswaError) {
       console.error("Supabase insert mahasiswa error:", insertMahasiswaError);
-      // NOTE: idealnya di sini pakai transaction & rollback user,
-      // tapi supabase-js belum support transaction langsung.
       return res
         .status(500)
         .json({ message: "Gagal menyimpan data mahasiswa" });
@@ -158,7 +166,7 @@ export default async function handler(
         id: userId,
         username: insertedUser.username,
         email: insertedUser.email,
-        roles: 1, // kita kembalikan sebagai number
+        roles: 1, // dikembalikan sebagai number
       },
     });
   } catch (error: any) {

@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { RowDataPacket } from "mysql2";
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,76 +19,100 @@ export default async function handler(
   const { id_psikolog, id_riwayat, rating } = req.body;
   const id_user = user.userId;
 
-  if (!id_psikolog || !id_riwayat || !rating || rating < 1 || rating > 5) {
+  const psikologIdNum = Number(id_psikolog);
+  const riwayatIdNum = Number(id_riwayat);
+  const ratingNum = Number(rating);
+
+  if (
+    !psikologIdNum ||
+    !riwayatIdNum ||
+    !ratingNum ||
+    ratingNum < 1 ||
+    ratingNum > 5
+  ) {
     return res.status(400).json({ message: "Data tidak valid" });
   }
 
-  const db = await connectDatabase();
-
   try {
-    // Cek apakah sudah pernah memberi rating untuk riwayat ini
-    const checkQuery = `
-      SELECT * FROM rating_psikolog
-      WHERE id_user = ? AND id_riwayat = ?
-      LIMIT 1
-    `;
+    // 1) Cek apakah sudah pernah memberi rating untuk riwayat ini
+    const { data: existing, error: existingErr } = await supabaseServer
+      .from("rating_psikolog")
+      .select("id_rating")
+      .eq("id_user", id_user)
+      .eq("id_riwayat", riwayatIdNum)
+      .maybeSingle();
 
-    const [existing]: RowDataPacket[] = await new Promise((resolve, reject) => {
-      db.query(checkQuery, [id_user, id_riwayat], (err, results) => {
-        if (err) reject(err);
-        else resolve(results);
-      });
-    });
-
-    if (existing) {
-      db.end();
-      return res.status(409).json({ message: "Kamu sudah memberi rating untuk sesi ini." });
+    if (existingErr) {
+      console.error("Supabase error (cek rating existing):", existingErr);
+      return res
+        .status(500)
+        .json({ message: "Terjadi kesalahan saat cek rating." });
     }
 
-    // Simpan rating
-    const insertQuery = `
-      INSERT INTO rating_psikolog (id_psikolog, id_user, id_riwayat, rating)
-      VALUES (?, ?, ?, ?)
-    `;
-
-    await new Promise((resolve, reject) => {
-      db.query(insertQuery, [id_psikolog, id_user, id_riwayat, rating], (err) => {
-        if (err) reject(err);
-        else resolve(true);
+    if (existing) {
+      return res.status(409).json({
+        message: "Kamu sudah memberi rating untuk sesi ini.",
       });
-    });
+    }
 
-    // Hitung rata-rata baru
-    const avgQuery = `
-      SELECT ROUND(AVG(rating), 1) AS average FROM rating_psikolog WHERE id_psikolog = ?
-    `;
-
-    const [avgResult]: RowDataPacket[] = await new Promise((resolve, reject) => {
-      db.query(avgQuery, [id_psikolog], (err, results) => {
-        if (err) reject(err);
-        else resolve(results);
+    // 2) Simpan rating baru
+    const { error: insertErr } = await supabaseServer
+      .from("rating_psikolog")
+      .insert({
+        id_psikolog: psikologIdNum,
+        id_user,
+        id_riwayat: riwayatIdNum,
+        rating: ratingNum,
+        waktu_rating: new Date().toISOString(),
       });
-    });
 
-    const newAverage = avgResult?.average || 0;
-
-    // Update ke tabel psikolog
-    const updatePsikologQuery = `
-      UPDATE psikolog SET rating = ? WHERE id_psikolog = ?
-    `;
-
-    await new Promise((resolve, reject) => {
-      db.query(updatePsikologQuery, [newAverage, id_psikolog], (err) => {
-        if (err) reject(err);
-        else resolve(true);
+    if (insertErr) {
+      console.error("Supabase error (insert rating):", insertErr);
+      return res.status(500).json({
+        message: "Terjadi kesalahan saat menyimpan rating.",
       });
-    });
+    }
 
-    db.end();
+    // 3) Hitung rata-rata baru rating psikolog ini
+    const { data: avgRow, error: avgErr } = await supabaseServer
+      .from("rating_psikolog")
+      .select("average:avg(rating)")
+      .eq("id_psikolog", psikologIdNum)
+      .maybeSingle();
+
+    if (avgErr) {
+      console.error("Supabase error (avg rating):", avgErr);
+      return res.status(500).json({
+        message: "Terjadi kesalahan saat menghitung rata-rata rating.",
+      });
+    }
+
+    const newAverageRaw = (avgRow as any)?.average ?? 0;
+    const newAverage =
+      typeof newAverageRaw === "number"
+        ? Math.round(newAverageRaw * 10) / 10
+        : Math.round(Number(newAverageRaw || 0) * 10) / 10;
+
+    // 4) Update rating di tabel psikolog
+    const { error: updateErr } = await supabaseServer
+      .from("psikolog")
+      .update({ rating: newAverage })
+      .eq("id_psikolog", psikologIdNum);
+
+    if (updateErr) {
+      console.error("Supabase error (update psikolog rating):", updateErr);
+      // rating user sudah tersimpan, jadi jangan di-rollback; cukup kasih info error
+      return res.status(500).json({
+        message:
+          "Rating berhasil dikirim, tapi gagal memperbarui rata-rata psikolog.",
+      });
+    }
+
     return res.status(201).json({ message: "Rating berhasil dikirim." });
   } catch (err) {
     console.error("Error saat kirim rating:", err);
-    db.end();
-    return res.status(500).json({ message: "Terjadi kesalahan saat menyimpan rating." });
+    return res.status(500).json({
+      message: "Terjadi kesalahan saat menyimpan rating.",
+    });
   }
 }

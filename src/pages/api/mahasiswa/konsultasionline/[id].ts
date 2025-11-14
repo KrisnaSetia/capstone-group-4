@@ -1,9 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const {
     query: { id },
     method,
@@ -18,74 +20,128 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: "Method not allowed" });
   }
 
-  const db = await connectDatabase();
+  // Pastikan id-nya valid number
+  const konsulId = Array.isArray(id)
+    ? parseInt(id[0], 10)
+    : parseInt(id as string, 10);
+  if (Number.isNaN(konsulId)) {
+    return res.status(400).json({ message: "ID konsultasi tidak valid" });
+  }
 
-  db.query(
-    `SELECT
-      ko.tanggal_pengajuan,
-      ko.status,
-      ko.keluhan,
-      ko.url_join_zoom,
-      ko.alasan_penolakan,
-      u.username AS nama_psikolog,
-      j.tanggal AS jadwal,
-      j.sesi
-    FROM konsultasi_online ko
-    INNER JOIN jadwal_online j ON ko.id_jadwal = j.id_jadwal
-    INNER JOIN psikolog p ON ko.id_psikolog = p.id_psikolog
-    INNER JOIN user u ON p.id_psikolog = u.id_user
-    WHERE ko.id_konsultasi_online = ? AND ko.id_mahasiswa = ?`,
-    [id, user.userId],
-    (err, results) => {
-      db.end();
+  try {
+    // 1) Ambil konsultasi_online untuk id ini & milik mahasiswa yang login
+    const { data: konsultasi, error: konsultasiErr } = await supabaseServer
+      .from("konsultasi_online")
+      .select(
+        `
+        id_konsultasi_online,
+        id_mahasiswa,
+        id_psikolog,
+        id_jadwal,
+        tanggal_pengajuan,
+        status,
+        keluhan,
+        url_join_zoom,
+        alasan_penolakan
+      `
+      )
+      .eq("id_konsultasi_online", konsulId)
+      .eq("id_mahasiswa", user.userId)
+      .maybeSingle();
 
-      if (err) {
-        console.error("Database error:", err);
-        return res.status(500).json({ message: "Database error" });
-      }
-
-      if (!results || (results as any[]).length === 0) {
-        return res.status(404).json({ message: "Konsultasi tidak ditemukan" });
-      }
-
-      const row = (results as any[])[0];
-
-      const sesiMap: Record<number, string> = {
-        1: "Sesi 1 (10.00 – 10.40)",
-        2: "Sesi 2 (11.00 – 11.40)",
-        3: "Sesi 3 (12.00 – 12.40)",
-      };
-
-      const statusMap: Record<number, string> = {
-        0: "Ditolak",
-        1: "Menunggu Persetujuan",
-        2: "Telah Disetujui",
-      };
-
-      const tanggalJadwal = new Date(row.jadwal);
-      const hariOptions = { weekday: "long", day: "numeric", month: "long", year: "numeric" } as const;
-      const tanggalFormatted = tanggalJadwal.toLocaleDateString("id-ID", hariOptions);
-
-      const tanggalPengajuan = new Date(row.tanggal_pengajuan).toLocaleString("id-ID", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-
-      return res.status(200).json({
-        id,
-        namaPsikolog: row.nama_psikolog,
-        tanggalPengajuan,
-        jadwalKonsultasi: tanggalFormatted,
-        sesiKonsultasi: sesiMap[row.sesi] || "Tidak diketahui",
-        keluhan: row.keluhan,
-        status: statusMap[row.status] || "Status tidak diketahui",
-        zoomLink: row.status === 2 ? row.url_join_zoom : null,
-        alasanPenolakan: row.status === 0 ? row.alasan_penolakan : null,
-      });
+    if (konsultasiErr) {
+      console.error("Supabase error (konsultasi_online):", konsultasiErr);
+      return res.status(500).json({ message: "Database error" });
     }
-  );
+
+    if (!konsultasi) {
+      return res.status(404).json({ message: "Konsultasi tidak ditemukan" });
+    }
+
+    // 2) Ambil jadwal_online
+    const { data: jadwal, error: jadwalErr } = await supabaseServer
+      .from("jadwal_online")
+      .select("tanggal, sesi")
+      .eq("id_jadwal", konsultasi.id_jadwal)
+      .maybeSingle();
+
+    if (jadwalErr) {
+      console.error("Supabase error (jadwal_online):", jadwalErr);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    if (!jadwal) {
+      return res
+        .status(404)
+        .json({ message: "Jadwal konsultasi tidak ditemukan" });
+    }
+
+    // 3) Ambil nama psikolog dari tabel user (FK via psikolog.id_psikolog = user.id_user)
+    const { data: psikologUser, error: psikologErr } = await supabaseServer
+      .from("user")
+      .select("username")
+      .eq("id_user", konsultasi.id_psikolog)
+      .maybeSingle();
+
+    if (psikologErr) {
+      console.error("Supabase error (user/psikolog):", psikologErr);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    const namaPsikolog = psikologUser?.username ?? "Tidak diketahui";
+
+    // 4) Mapping sesi & status seperti versi lama
+    const sesiMap: Record<number, string> = {
+      1: "Sesi 1 (10.00 – 10.40)",
+      2: "Sesi 2 (11.00 – 11.40)",
+      3: "Sesi 3 (12.00 – 12.40)",
+    };
+
+    const statusMap: Record<number, string> = {
+      0: "Ditolak",
+      1: "Menunggu Persetujuan",
+      2: "Telah Disetujui",
+    };
+
+    // 5) Format tanggal
+    const tanggalJadwal = new Date(jadwal.tanggal);
+    const hariOptions = {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    } as const;
+    const tanggalFormatted = tanggalJadwal.toLocaleDateString(
+      "id-ID",
+      hariOptions
+    );
+
+    const tanggalPengajuan = konsultasi.tanggal_pengajuan
+      ? new Date(konsultasi.tanggal_pengajuan).toLocaleString("id-ID", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      : null;
+
+    const statusNumber = konsultasi.status as number;
+
+    return res.status(200).json({
+      id: konsulId,
+      namaPsikolog,
+      tanggalPengajuan,
+      jadwalKonsultasi: tanggalFormatted,
+      sesiKonsultasi: sesiMap[jadwal.sesi] || "Tidak diketahui",
+      keluhan: konsultasi.keluhan,
+      status: statusMap[statusNumber] || "Status tidak diketahui",
+      zoomLink: statusNumber === 2 ? konsultasi.url_join_zoom : null,
+      alasanPenolakan: statusNumber === 0 ? konsultasi.alasan_penolakan : null,
+    });
+  } catch (err) {
+    console.error("Server error (detail konsultasi online):", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 }

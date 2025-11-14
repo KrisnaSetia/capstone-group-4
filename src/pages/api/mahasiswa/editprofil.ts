@@ -1,93 +1,110 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const user = getUserFromRequest(req);
-  if (!user || user.roles !== 1) {
+  const me = getUserFromRequest(req);
+  if (!me || me.roles !== 1) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const db = await connectDatabase();
+  const userId = me.userId;
 
   if (req.method === "GET") {
-    const query = `
-      SELECT u.id_user, u.email, u.username, u.usia, u.jenis_kelamin, m.jurusan_mahasiswa
-      FROM user u
-      INNER JOIN mahasiswa m ON u.id_user = m.id_mahasiswa
-      WHERE u.id_user = ?
-    `;
+    try {
+      // Ambil data dari tabel user
+      const { data: userRow, error: userErr } = await supabaseServer
+        .from("user")
+        .select("id_user, email, username, usia, jenis_kelamin")
+        .eq("id_user", userId)
+        .maybeSingle();
 
-    db.query(query, [user.userId], (err, results) => {
-      db.end();
-      if (err) {
-        console.error(err);
+      if (userErr) {
+        console.error("Supabase error (user GET):", userErr);
         return res.status(500).json({ message: "Database error" });
       }
 
-      if (results.length === 0) {
-        return res.status(404).json({ message: "Data profil tidak ditemukan" });
+      if (!userRow) {
+        return res.status(404).json({ message: "Data user tidak ditemukan" });
       }
 
-      return res.status(200).json({ data: results[0] });
-    });
+      // Ambil data mahasiswa
+      const { data: mhsRow, error: mhsErr } = await supabaseServer
+        .from("mahasiswa")
+        .select("jurusan_mahasiswa")
+        .eq("id_mahasiswa", userId)
+        .maybeSingle();
+
+      if (mhsErr) {
+        console.error("Supabase error (mahasiswa GET):", mhsErr);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      if (!mhsRow) {
+        return res
+          .status(404)
+          .json({ message: "Data profil mahasiswa tidak ditemukan" });
+      }
+
+      return res.status(200).json({
+        data: {
+          id_user: userRow.id_user,
+          email: userRow.email,
+          username: userRow.username,
+          usia: userRow.usia,
+          jenis_kelamin: userRow.jenis_kelamin,
+          jurusan_mahasiswa: mhsRow.jurusan_mahasiswa,
+        },
+      });
+    } catch (err) {
+      console.error("Server error (GET editprofil):", err);
+      return res.status(500).json({ message: "Database error" });
+    }
   } else if (req.method === "PUT") {
     const { username, jenis_kelamin, usia, jurusan_mahasiswa } = req.body;
 
     if (!username || !jenis_kelamin || !usia || !jurusan_mahasiswa) {
-      db.end();
       return res.status(400).json({ message: "Data tidak lengkap" });
     }
 
-    const updateUser = `UPDATE user SET username = ?, jenis_kelamin = ?, usia = ? WHERE id_user = ?`;
-    const updateMahasiswa = `UPDATE mahasiswa SET jurusan_mahasiswa = ? WHERE id_mahasiswa = ?`;
+    try {
+      // 1) Update tabel user
+      const { error: updateUserErr } = await supabaseServer
+        .from("user")
+        .update({
+          username,
+          jenis_kelamin,
+          usia: String(usia), // di schema kamu usia bertipe text
+        })
+        .eq("id_user", userId);
 
-    db.beginTransaction((err) => {
-      if (err) {
-        db.end();
-        return res.status(500).json({ message: "Gagal memulai transaksi" });
+      if (updateUserErr) {
+        console.error("Supabase error (update user):", updateUserErr);
+        return res.status(500).json({ message: "Gagal update user" });
       }
 
-      db.query(
-        updateUser,
-        [username, jenis_kelamin, usia, user.userId],
-        (err1) => {
-          if (err1) {
-            return db.rollback(() => {
-              db.end();
-              res.status(500).json({ message: "Gagal update user" });
-            });
-          }
+      // 2) Update tabel mahasiswa
+      const { error: updateMhsErr } = await supabaseServer
+        .from("mahasiswa")
+        .update({
+          jurusan_mahasiswa,
+        })
+        .eq("id_mahasiswa", userId);
 
-          db.query(
-            updateMahasiswa,
-            [jurusan_mahasiswa, user.userId],
-            (err2) => {
-              if (err2) {
-                return db.rollback(() => {
-                  db.end();
-                  res.status(500).json({ message: "Gagal update mahasiswa" });
-                });
-              }
+      if (updateMhsErr) {
+        console.error("Supabase error (update mahasiswa):", updateMhsErr);
+        return res.status(500).json({ message: "Gagal update mahasiswa" });
+      }
 
-              db.commit((err3) => {
-                db.end();
-                if (err3) {
-                  return res.status(500).json({ message: "Gagal commit data" });
-                }
-
-                return res.status(200).json({ message: "Update berhasil" });
-              });
-            }
-          );
-        }
-      );
-    });
+      return res.status(200).json({ message: "Update berhasil" });
+    } catch (err) {
+      console.error("Server error (PUT editprofil):", err);
+      return res.status(500).json({ message: "Gagal commit data" });
+    }
   } else {
-    db.end();
     return res.status(405).json({ message: "Method not allowed" });
   }
 }

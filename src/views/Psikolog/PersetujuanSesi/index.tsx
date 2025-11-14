@@ -35,9 +35,12 @@ export default function PersetujuanSesiPsikolog() {
       try {
         const res = await fetch("/api/psikolog/persetujuansesi");
         const json = await res.json();
-
+        
+        // if (!res.ok) {
+        //   throw new Error("Gagal mengambil data");
+        // }
         if (!res.ok) {
-          throw new Error(json.message || "Gagal mengambil data");
+          console.log(json.message || "Gagal mengambil data");
         }
 
         const data = (json.data || []).map((item: any) => ({

@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NextApiRequest, NextApiResponse } from "next";
 import base64 from "base-64";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { RowDataPacket } from "mysql2";
 
 const CLIENT_ID = process.env.ZOOM_CLIENT_ID!;
 const CLIENT_SECRET = process.env.ZOOM_CLIENT_SECRET!;
@@ -49,24 +49,18 @@ export default async function handler(
     return res.status(400).json({ message: "ID konsultasi diperlukan" });
   }
 
-  const db = await connectDatabase();
-
   try {
     // Validasi: pastikan konsultasi milik psikolog ini dan belum diproses
-    const result: RowDataPacket[] = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT id_jadwal FROM konsultasi_online
-         WHERE id_konsultasi_online = ? AND id_psikolog = ? AND status = 1`,
-        [id_konsultasi, user.userId],
-        (err, result) => {
-          if (err) reject(err);
-          else resolve(result as RowDataPacket[]);
-        }
-      );
-    });
+    const { data: konsultasiData, error: konsultasiError } =
+      (await supabaseServer
+        .from("konsultasi_online")
+        .select("id_jadwal")
+        .eq("id_konsultasi_online", id_konsultasi)
+        .eq("id_psikolog", user.userId)
+        .eq("status", 1)
+        .single()) as { data: any; error: any };
 
-    if (result.length === 0) {
-      db.end();
+    if (konsultasiError || !konsultasiData) {
       return res
         .status(404)
         .json({ message: "Konsultasi tidak ditemukan atau sudah diproses" });
@@ -99,25 +93,25 @@ export default async function handler(
     }
 
     // Update status dan simpan Zoom URL ke database
-    await new Promise((resolve, reject) => {
-      db.query(
-        `UPDATE konsultasi_online
-         SET status = 2, url_join_zoom = ?, url_start_zoom = ?
-         WHERE id_konsultasi_online = ? AND id_psikolog = ?`,
-        [meeting.join_url, meeting.start_url, id_konsultasi, user.userId],
-        (err) => {
-          if (err) reject(err);
-          else resolve(null);
-        }
-      );
-    });
+    const { error: updateError } = await supabaseServer
+      .from("konsultasi_online")
+      .update({
+        status: 2,
+        url_join_zoom: meeting.join_url,
+        url_start_zoom: meeting.start_url,
+      })
+      .eq("id_konsultasi_online", id_konsultasi)
+      .eq("id_psikolog", user.userId);
 
-    db.end();
+    if (updateError) {
+      console.error("Update error:", updateError);
+      throw new Error("Gagal mengupdate status konsultasi");
+    }
+
     return res
       .status(200)
       .json({ message: "Konsultasi berhasil disetujui", meeting });
   } catch (err: unknown) {
-    db.end();
     if (err instanceof Error) {
       console.error("Error:", err.message);
       return res.status(500).json({ message: err.message });

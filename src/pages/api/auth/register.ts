@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import bcrypt from "bcrypt";
 import "dotenv/config";
 
@@ -43,6 +43,7 @@ export default async function handler(
       jurusan,
     }: RegisterMahasiswaRequest = req.body;
 
+    // 🔹 Validasi basic
     if (
       !username ||
       !email ||
@@ -54,10 +55,12 @@ export default async function handler(
     ) {
       return res.status(400).json({ message: "Semua field wajib diisi" });
     }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: "Format email tidak valid" });
     }
+
     if (email.endsWith("@psikolog.com")) {
       return res.status(400).json({
         message:
@@ -79,82 +82,94 @@ export default async function handler(
       return res.status(400).json({ message: "Usia harus diatas 18 tahun" });
     }
 
-    const validGender = ["L", "P", "Laki-laki", "Perempuan"];
-    if (!validGender.includes(jenis_kelamin)) {
+    // 🔁 Normalisasi & validasi gender
+    const rawGender = (jenis_kelamin || "").trim().toLowerCase();
+    let genderForDb: "L" | "P";
+
+    if (
+      rawGender === "l" ||
+      rawGender === "laki-laki" ||
+      rawGender === "laki laki"
+    ) {
+      genderForDb = "L";
+    } else if (rawGender === "p" || rawGender === "perempuan") {
+      genderForDb = "P";
+    } else {
       return res.status(400).json({ message: "Jenis kelamin tidak valid" });
     }
 
-    const db = await connectDatabase();
+    // 🔹 1. Cek email sudah terdaftar atau belum di Supabase
+    const { data: existingUser, error: checkError } = await supabaseServer
+      .from("user")
+      .select("id_user")
+      .eq("email", email)
+      .maybeSingle();
 
-    const checkEmailQuery = `SELECT email FROM user WHERE email = ?`;
-    db.query(checkEmailQuery, [email], async (error: any, results: any) => {
-      if (error) {
-        db.end();
-        console.error("Database error:", error);
-        return res.status(500).json({ message: "Database error" });
-      }
+    if (checkError) {
+      console.error("Supabase check email error:", checkError);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-      if (results.length > 0) {
-        db.end();
-        return res.status(400).json({ message: "Email sudah terdaftar" });
-      }
+    if (existingUser) {
+      return res.status(400).json({ message: "Email sudah terdaftar" });
+    }
 
-      try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const insertUserQuery = `
-          INSERT INTO user (username, email, password, usia, jenis_kelamin, roles)
-          VALUES (?, ?, ?, ?, ?, 1)
-        `;
+    // 🔹 2. Hash password
+    let hashedPassword: string;
+    try {
+      hashedPassword = await bcrypt.hash(password, 10);
+    } catch (err) {
+      console.error("Hashing error:", err);
+      return res.status(500).json({ message: "Gagal mengenkripsi password" });
+    }
 
-        db.query(
-          insertUserQuery,
-          [username, email, hashedPassword, usia, jenis_kelamin],
-          (userError: any, userResults: any) => {
-            if (userError) {
-              db.end();
-              console.error("Database error:", userError);
-              return res.status(500).json({ message: "Gagal menyimpan user" });
-            }
+    // 🔹 3. Insert ke tabel user
+    const { data: insertedUser, error: insertUserError } = await supabaseServer
+      .from("user")
+      .insert({
+        username,
+        email,
+        password: hashedPassword,
+        usia: String(usia),
+        jenis_kelamin: genderForDb, // ⬅️ hanya "L" atau "P" yang disimpan
+        roles: "1", // 1 = mahasiswa (disimpan sebagai text)
+      })
+      .select("id_user, username, email, roles")
+      .single();
 
-            const userId = userResults.insertId;
-            const insertMahasiswaQuery = `
-              INSERT INTO mahasiswa (id_mahasiswa, jurusan_mahasiswa)
-              VALUES (?, ?)
-            `;
+    if (insertUserError || !insertedUser) {
+      console.error("Supabase insert user error:", insertUserError);
+      return res.status(500).json({ message: "Gagal menyimpan user" });
+    }
 
-            db.query(
-              insertMahasiswaQuery,
-              [userId, jurusan],
-              (mhsError: any) => {
-                db.end();
+    const userId = insertedUser.id_user;
 
-                if (mhsError) {
-                  console.error("Database error:", mhsError);
-                  return res
-                    .status(500)
-                    .json({ message: "Gagal menyimpan data mahasiswa" });
-                }
+    // 🔹 4. Insert ke tabel mahasiswa (extend dari user)
+    const { error: insertMahasiswaError } = await supabaseServer
+      .from("mahasiswa")
+      .insert({
+        id_mahasiswa: userId,
+        jurusan_mahasiswa: jurusan,
+      });
 
-                return res.status(201).json({
-                  message: "Registrasi mahasiswa berhasil",
-                  user: {
-                    id: userId,
-                    username,
-                    email,
-                    roles: 1,
-                  },
-                });
-              }
-            );
-          }
-        );
-      } catch (err) {
-        db.end();
-        console.error("Hashing error:", err);
-        return res.status(500).json({ message: "Gagal mengenkripsi password" });
-      }
+    if (insertMahasiswaError) {
+      console.error("Supabase insert mahasiswa error:", insertMahasiswaError);
+      return res
+        .status(500)
+        .json({ message: "Gagal menyimpan data mahasiswa" });
+    }
+
+    // 🔹 5. Response sukses
+    return res.status(201).json({
+      message: "Registrasi mahasiswa berhasil",
+      user: {
+        id: userId,
+        username: insertedUser.username,
+        email: insertedUser.email,
+        roles: 1, // dikembalikan sebagai number
+      },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Server error:", error);
     return res.status(500).json({ message: "Server error" });
   }

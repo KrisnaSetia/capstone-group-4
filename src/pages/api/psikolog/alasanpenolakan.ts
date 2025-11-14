@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { ResultSetHeader, RowDataPacket } from "mysql2";
 
 export default async function handler(
   req: NextApiRequest,
@@ -28,75 +28,62 @@ export default async function handler(
       .json({ message: "Data tidak lengkap atau tidak valid" });
   }
 
-  const db = await connectDatabase();
-
   try {
     // 1. Ambil id_jadwal terkait
-    const jadwalResult = await new Promise<RowDataPacket[]>(
-      (resolve, reject) => {
-        db.query(
-          `SELECT id_jadwal FROM konsultasi_online WHERE id_konsultasi_online = ? AND id_psikolog = ?`,
-          [id_konsultasi, user.userId],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result as RowDataPacket[]);
-          }
-        );
-      }
-    );
+    const { data: konsultasiData, error: konsultasiError } =
+      (await supabaseServer
+        .from("konsultasi_online")
+        .select("id_jadwal")
+        .eq("id_konsultasi_online", id_konsultasi)
+        .eq("id_psikolog", user.userId)
+        .single()) as { data: any; error: any };
 
-    if (!jadwalResult || jadwalResult.length === 0) {
-      db.end();
+    if (konsultasiError || !konsultasiData) {
       return res.status(404).json({ message: "Konsultasi tidak ditemukan" });
     }
 
-    const id_jadwal = jadwalResult[0].id_jadwal;
+    const id_jadwal = konsultasiData.id_jadwal;
 
     // 2. Update konsultasi jadi ditolak
-    const updateResult = await new Promise<ResultSetHeader>(
-      (resolve, reject) => {
-        db.query(
-          `UPDATE konsultasi_online
-         SET status = 0, alasan_penolakan = ?
-         WHERE id_konsultasi_online = ? AND id_psikolog = ?`,
-          [alasan_penolakan.trim(), id_konsultasi, user.userId],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result as ResultSetHeader);
-          }
-        );
-      }
-    );
+    const { data: updateData, error: updateError } = await supabaseServer
+      .from("konsultasi_online")
+      .update({
+        status: 0,
+        alasan_penolakan: alasan_penolakan.trim(),
+      })
+      .eq("id_konsultasi_online", id_konsultasi)
+      .eq("id_psikolog", user.userId)
+      .select();
 
-    if (updateResult.affectedRows === 0) {
-      db.end();
+    if (updateError) {
+      console.error("Update error:", updateError);
       return res
-        .status(404)
-        .json({
-          message: "Konsultasi tidak ditemukan atau tidak berhak mengakses",
-        });
+        .status(500)
+        .json({ message: "Gagal mengupdate status konsultasi" });
+    }
+
+    if (!updateData || updateData.length === 0) {
+      return res.status(404).json({
+        message: "Konsultasi tidak ditemukan atau tidak berhak mengakses",
+      });
     }
 
     // 3. Set status jadwal jadi 0 agar bisa dipakai ulang
-    await new Promise<void>((resolve, reject) => {
-      db.query(
-        `UPDATE jadwal_online SET status = 0 WHERE id_jadwal = ?`,
-        [id_jadwal],
-        (err) => {
-          if (err) reject(err);
-          else resolve();
-        }
-      );
-    });
+    const { error: jadwalError } = await supabaseServer
+      .from("jadwal_online")
+      .update({ status: 0 })
+      .eq("id_jadwal", id_jadwal);
 
-    db.end();
-    return res
-      .status(200)
-      .json({
-        message: "Konsultasi berhasil ditolak dan jadwal dibuka kembali",
-      });
+    if (jadwalError) {
+      console.error("Jadwal update error:", jadwalError);
+      // Tidak return error karena konsultasi sudah ditolak
+      // Hanya log saja
+    }
+
+    return res.status(200).json({
+      message: "Konsultasi berhasil ditolak dan jadwal dibuka kembali",
+    });
   } catch (error) {
-    db.end();
     console.error("Error:", error);
     return res
       .status(500)

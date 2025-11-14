@@ -1,8 +1,7 @@
-// File: pages/api/mahasiswa/konsultasionline/index.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { RowDataPacket } from "mysql2";
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,30 +16,35 @@ export default async function handler(
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const db = await connectDatabase();
-
   try {
-    const result: RowDataPacket[] = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT 
-          ko.id_konsultasi_online AS id,
-          u.username AS namaPsikolog,
-          DATE_FORMAT(j.tanggal, '%d %M %Y') AS tanggal,
-          j.sesi,
-          ko.status
-        FROM konsultasi_online ko
-        INNER JOIN jadwal_online j ON ko.id_jadwal = j.id_jadwal
-        INNER JOIN psikolog p ON ko.id_psikolog = p.id_psikolog
-        INNER JOIN user u ON p.id_psikolog = u.id_user
-        WHERE ko.id_mahasiswa = ? AND ko.status != 3
-        ORDER BY ko.id_konsultasi_online DESC`,
-        [user.userId],
-        (err, result) => {
-          if (err) reject(err);
-          else resolve(result as RowDataPacket[]);
-        }
-      );
-    });
+    // Query Supabase dengan multiple joins
+    const { data: result, error } = await supabaseServer
+      .from("konsultasi_online")
+      .select(
+        `
+        id_konsultasi_online,
+        status,
+        jadwal_online!inner (
+          tanggal,
+          sesi
+        ),
+        psikolog!inner (
+          user!inner (
+            username
+          )
+        )
+      `
+      )
+      .eq("id_mahasiswa", user.userId)
+      .neq("status", 3)
+      .order("id_konsultasi_online", { ascending: false });
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return res
+        .status(500)
+        .json({ message: "Terjadi kesalahan saat mengambil data" });
+    }
 
     const sesiMap: Record<number, string> = {
       1: "Sesi 1 (10.00 - 10.40)",
@@ -54,19 +58,27 @@ export default async function handler(
       0: "ditolak",
     };
 
-    const data = result.map((row) => ({
-      id: row.id.toString(),
-      namaPsikolog: row.namaPsikolog,
-      tanggal: row.tanggal,
-      sesi: sesiMap[row.sesi] || `Sesi ${row.sesi}`,
+    // Format tanggal ke format "dd Month yyyy" (Indonesia)
+    const formatTanggal = (isoDate: string): string => {
+      const date = new Date(isoDate);
+      return date.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+    };
+
+    const data = (result || []).map((row: any) => ({
+      id: row.id_konsultasi_online.toString(),
+      namaPsikolog: row.psikolog.user.username,
+      tanggal: formatTanggal(row.jadwal_online.tanggal),
+      sesi: sesiMap[row.jadwal_online.sesi] || `Sesi ${row.jadwal_online.sesi}`,
       status: statusMap[row.status] || "menunggu",
     }));
 
-    db.end();
     return res.status(200).json({ data });
   } catch (err) {
     console.error("Gagal mengambil data konsultasi:", err);
-    db.end();
     return res
       .status(500)
       .json({ message: "Terjadi kesalahan saat mengambil data" });

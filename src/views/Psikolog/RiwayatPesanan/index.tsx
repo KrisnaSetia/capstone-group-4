@@ -70,7 +70,7 @@ export default function RiwayatPesananPsikologPage() {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.message || "Gagal mengambil data riwayat");
+          console.log(result.message || "Gagal mengambil data riwayat");
         }
 
         const mappedData = (result.data || []).map(

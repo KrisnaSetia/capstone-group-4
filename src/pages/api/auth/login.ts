@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { serialize } from "cookie";
@@ -49,104 +49,97 @@ export default async function handler(
       return res.status(400).json({ message: "Format email tidak valid" });
     }
 
-    const db = await connectDatabase();
+    // 🔹 Cari user berdasarkan email di Supabase
+    const { data, error } = await supabaseServer
+      .from("user") // nama tabel di Supabase
+      .select("id_user, username, email, password, roles")
+      .eq("email", email)
+      .maybeSingle(); // 1 row atau null
 
-    // Cari user berdasarkan email
-    const findUser = `SELECT id_user, username, email, password, roles FROM user WHERE email = ?`;
+    if (error) {
+      console.error("Supabase error:", error);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-    db.query(findUser, [email], async (error: any, results: any) => {
-      db.end();
+    // Cek apakah email ada
+    if (!data) {
+      return res.status(401).json({ message: "Email tidak ditemukan" });
+    }
 
-      if (error) {
-        console.error("Database error:", error);
-        return res.status(500).json({ message: "Database error" });
-      }
+    // Di schema Supabase kamu, roles itu bertipe text, jadi kita parse ke number
+    const user: User = {
+      id: data.id_user,
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      roles:
+        typeof data.roles === "string" ? parseInt(data.roles, 10) : data.roles,
+    };
 
-      // Cek apakah email ada
-      if (results.length === 0) {
-        return res.status(401).json({ message: "Email tidak ditemukan" });
-      }
+    // 🔹 Verifikasi password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ message: "Password salah" });
+    }
 
-      const user: User = {
-        id: results[0].id_user,
-        username: results[0].username,
-        email: results[0].email,
-        password: results[0].password,
-        roles: results[0].roles,
-      };
+    // 🔹 Buat JWT token dengan informasi user yang lebih lengkap
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET environment variable is required");
+    }
 
-      try {
-        // Verifikasi password
-        const match = await bcrypt.compare(password, user.password);
-        if (!match) {
-          return res.status(401).json({ message: "Password salah" });
-        }
+    const tokenPayload = {
+      userId: user.id,
+      email: user.email,
+      username: user.username,
+      roles: user.roles,
+    };
 
-        // Buat JWT token dengan informasi user yang lebih lengkap
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-          throw new Error("JWT_SECRET environment variable is required");
-        }
-
-        const tokenPayload = {
-          userId: user.id,
-          email: user.email,
-          username: user.username,
-          roles: user.roles,
-        };
-
-        const token = jwt.sign(tokenPayload, secret, {
-          expiresIn: "24h", // Ubah menjadi 24 jam untuk pengalaman user yang lebih baik
-        });
-
-        // Set cookie dengan konfigurasi yang aman
-        const tokenCookie = serialize("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 7200, // 24 hours dalam detik
-          path: "/",
-        });
-
-        // Set header untuk cookie
-        res.setHeader("Set-Cookie", tokenCookie);
-
-        // Tentukan URL redirect berdasarkan role (tanpa ID di URL)
-        let redirectUrl: string;
-
-        if (user.roles === 1) {
-          // Mahasiswa (roles = 1)
-          redirectUrl = `/mahasiswa/beranda`;
-        } else if (user.roles === 0) {
-          // Psikolog (roles = 0)
-          redirectUrl = `/psikolog/beranda`;
-        } else if (user.roles === 2) {
-          // Admin (roles = 2)
-          redirectUrl = `/admin/beranda`;
-        } else {
-          // Role tidak dikenali
-          return res.status(400).json({ message: "Role user tidak valid" });
-        }
-
-        // Response sukses dengan informasi redirect
-        return res.status(200).json({
-          message: "Login berhasil",
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            roles: user.roles,
-          },
-          redirectUrl: redirectUrl,
-        });
-      } catch (bcryptError) {
-        console.error("Bcrypt error:", bcryptError);
-        return res
-          .status(500)
-          .json({ message: "Error saat verifikasi password" });
-      }
+    const token = jwt.sign(tokenPayload, secret, {
+      expiresIn: "24h",
     });
-  } catch (error) {
+
+    // Set cookie dengan konfigurasi yang aman
+    const tokenCookie = serialize("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60, // 24 jam dalam detik
+      path: "/",
+    });
+
+    // Set header untuk cookie
+    res.setHeader("Set-Cookie", tokenCookie);
+
+    // 🔹 Tentukan URL redirect berdasarkan role (tanpa ID di URL)
+    let redirectUrl: string;
+
+    if (user.roles === 1) {
+      // Mahasiswa (roles = 1)
+      redirectUrl = `/mahasiswa/beranda`;
+    } else if (user.roles === 0) {
+      // Psikolog (roles = 0)
+      redirectUrl = `/psikolog/beranda`;
+    } else if (user.roles === 2) {
+      // Admin (roles = 2)
+      redirectUrl = `/admin/beranda`;
+    } else {
+      // Role tidak dikenali
+      return res.status(400).json({ message: "Role user tidak valid" });
+    }
+
+    // Response sukses dengan informasi redirect
+    return res.status(200).json({
+      message: "Login berhasil",
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        roles: user.roles,
+      },
+      redirectUrl,
+    });
+  } catch (error: any) {
     console.error("Server error:", error);
     return res.status(500).json({ message: "Server error" });
   }

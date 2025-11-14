@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { RowDataPacket } from "mysql2";
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,80 +17,68 @@ export default async function handler(
     return res.status(400).json({ message: "Invalid ID" });
   }
 
-  const db = await connectDatabase();
-
   // ===== GET: Nama Psikolog + Sesi Tersedia =====
   if (req.method === "GET") {
     const tanggal = req.query.tanggal as string;
 
-    // Ambil nama psikolog
-    let namaPsikolog = "";
     try {
-      const [result] = await new Promise<RowDataPacket[]>((resolve, reject) => {
-        db.query(
-          `SELECT u.username AS namaPsikolog FROM psikolog p
-           INNER JOIN user u ON u.id_user = p.id_psikolog
-           WHERE p.id_psikolog = ?`,
-          [idPsikolog],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result as RowDataPacket[]);
-          }
-        );
-      });
+      // Ambil nama psikolog
+      const { data: psikologData, error: psikologError } = (await supabaseServer
+        .from("psikolog")
+        .select(
+          `
+          user!inner (
+            username
+          )
+        `
+        )
+        .eq("id_psikolog", idPsikolog)
+        .single()) as { data: any; error: any };
 
-      if (!result) {
-        db.end();
+      if (psikologError || !psikologData) {
         return res.status(404).json({ message: "Psikolog not found" });
       }
 
-      namaPsikolog = result.namaPsikolog;
-    } catch {
-      db.end();
-      return res.status(500).json({ message: "Error fetching nama psikolog" });
-    }
+      const namaPsikolog = psikologData.user.username;
 
-    // Jika belum pilih tanggal
-    if (!tanggal) {
-      db.end();
-      return res
-        .status(200)
-        .json({ data: { namaPsikolog, sesi_tersedia: [] } });
-    }
+      // Jika belum pilih tanggal
+      if (!tanggal) {
+        return res
+          .status(200)
+          .json({ data: { namaPsikolog, sesi_tersedia: [] } });
+      }
 
-    try {
+      // Ambil sesi yang tersedia
       const sesiMap: Record<number, string> = {
         1: "10.00 – 10.40",
         2: "11.00 – 11.40",
         3: "12.00 – 12.40",
       };
 
-      const sesiResult: RowDataPacket[] = await new Promise(
-        (resolve, reject) => {
-          db.query(
-            `SELECT sesi FROM jadwal_online
-           WHERE id_psikolog = ? AND DATE(tanggal) = ? AND status = 0
-           ORDER BY sesi ASC`,
-            [idPsikolog, tanggal],
-            (err, result) => {
-              if (err) reject(err);
-              else resolve(result as RowDataPacket[]);
-            }
-          );
-        }
-      );
+      const { data: sesiResult, error: sesiError } = await supabaseServer
+        .from("jadwal_online")
+        .select("sesi")
+        .eq("id_psikolog", idPsikolog)
+        .gte("tanggal", `${tanggal}T00:00:00`)
+        .lt("tanggal", `${tanggal}T23:59:59`)
+        .eq("status", 0)
+        .order("sesi", { ascending: true });
 
-      const sesi_tersedia = sesiResult.map(
-        (row) => sesiMap[row.sesi] || `Sesi ${row.sesi}`
+      if (sesiError) {
+        console.error("Supabase error:", sesiError);
+        return res
+          .status(500)
+          .json({ message: "Error fetching sesi konsultasi" });
+      }
+
+      const sesi_tersedia = (sesiResult || []).map(
+        (row: any) => sesiMap[row.sesi] || `Sesi ${row.sesi}`
       );
-      db.end();
 
       return res.status(200).json({ data: { namaPsikolog, sesi_tersedia } });
-    } catch {
-      db.end();
-      return res
-        .status(500)
-        .json({ message: "Error fetching sesi konsultasi" });
+    } catch (err) {
+      console.error("Error:", err);
+      return res.status(500).json({ message: "Server error" });
     }
   }
 
@@ -98,7 +86,6 @@ export default async function handler(
   if (req.method === "POST") {
     const { tanggal, sesi, keluhan } = req.body;
     if (!tanggal || !sesi || !keluhan) {
-      db.end();
       return res.status(400).json({ message: "Data tidak lengkap" });
     }
 
@@ -111,68 +98,67 @@ export default async function handler(
 
     const sesiNumber = sesiMap[sesi];
     if (!sesiNumber) {
-      db.end();
       return res.status(400).json({ message: "Sesi tidak valid" });
     }
 
     try {
       // Cek jadwal tersedia
-      const [jadwalRow]: RowDataPacket[] = await new Promise(
-        (resolve, reject) => {
-          db.query(
-            `SELECT id_jadwal FROM jadwal_online
-           WHERE id_psikolog = ? AND DATE(tanggal) = ? AND sesi = ? AND status = 0 LIMIT 1`,
-            [idPsikolog, tanggal, sesiNumber],
-            (err, result) => {
-              if (err) reject(err);
-              else resolve(result as RowDataPacket[]);
-            }
-          );
-        }
-      );
+      const { data: jadwalData, error: jadwalError } = (await supabaseServer
+        .from("jadwal_online")
+        .select("id_jadwal")
+        .eq("id_psikolog", idPsikolog)
+        .gte("tanggal", `${tanggal}T00:00:00`)
+        .lt("tanggal", `${tanggal}T23:59:59`)
+        .eq("sesi", sesiNumber)
+        .eq("status", 0)
+        .limit(1)
+        .single()) as { data: any; error: any };
 
-      if (!jadwalRow || !jadwalRow.id_jadwal) {
-        db.end();
+      if (jadwalError || !jadwalData) {
         return res
           .status(404)
           .json({ message: "Sesi tidak ditemukan atau sudah penuh" });
       }
 
-      const id_jadwal = jadwalRow.id_jadwal;
+      const id_jadwal = jadwalData.id_jadwal;
 
       // Simpan ke konsultasi_online
-      await new Promise((resolve, reject) => {
-        db.query(
-          `INSERT INTO konsultasi_online
-           (id_mahasiswa, id_psikolog, id_jadwal, keluhan, status, tanggal_pengajuan)
-           VALUES (?, ?, ?, ?, 1, NOW())`,
-          [user.userId, idPsikolog, id_jadwal, keluhan],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
-          }
-        );
-      });
+      const { error: insertError } = await supabaseServer
+        .from("konsultasi_online")
+        .insert({
+          id_mahasiswa: user.userId,
+          id_psikolog: idPsikolog,
+          id_jadwal: id_jadwal,
+          keluhan: keluhan,
+          status: 1,
+          tanggal_pengajuan: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        return res
+          .status(500)
+          .json({ message: "Terjadi kesalahan saat menyimpan data" });
+      }
 
       // Update jadwal menjadi penuh
-      await new Promise((resolve, reject) => {
-        db.query(
-          `UPDATE jadwal_online SET status = 1 WHERE id_jadwal = ?`,
-          [id_jadwal],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
-          }
-        );
-      });
+      const { error: updateError } = await supabaseServer
+        .from("jadwal_online")
+        .update({ status: 1 })
+        .eq("id_jadwal", id_jadwal);
 
-      db.end();
+      if (updateError) {
+        console.error("Update error:", updateError);
+        return res
+          .status(500)
+          .json({ message: "Terjadi kesalahan saat update jadwal" });
+      }
+
       return res
         .status(200)
         .json({ message: "Konsultasi berhasil didaftarkan" });
     } catch (err) {
       console.error("Gagal menyimpan data konsultasi:", err);
-      db.end();
       return res
         .status(500)
         .json({ message: "Terjadi kesalahan saat menyimpan data" });
@@ -180,6 +166,5 @@ export default async function handler(
   }
 
   // Method not allowed
-  db.end();
   return res.status(405).json({ message: "Method not allowed" });
 }

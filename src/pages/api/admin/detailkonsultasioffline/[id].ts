@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { RowDataPacket } from "mysql2";
 
 type DetailPesanan = {
   id: number;
@@ -33,38 +33,40 @@ export default async function handler(
     return res.status(400).json({ message: "Invalid ID" });
   }
 
-  const db = await connectDatabase();
-
   try {
-    const result: RowDataPacket[] = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT 
-          ko.id_konsultasi,
-          ko.keluhan,
-          ko.status,
-          ko.tanggal_pengajuan,
-          j.tanggal AS jadwal_tanggal,
-          j.sesi,
-          u.username AS nama_mahasiswa
-        FROM konsultasi_offline ko
-        INNER JOIN jadwal_offline j ON ko.id_jadwal = j.id_jadwal
-        INNER JOIN user u ON ko.id_user = u.id_user
-        WHERE ko.id_konsultasi = ?`,
-        [id],
-        (err, result) => {
-          if (err) reject(err);
-          else resolve(result as RowDataPacket[]);
-        }
-      );
-    });
+    // Query Supabase dengan join ke jadwal_offline dan user
+    const { data: result, error } = await supabaseServer
+      .from("konsultasi_offline")
+      .select(
+        `
+        id_konsultasi,
+        keluhan,
+        status,
+        tanggal_pengajuan,
+        jadwal_offline!inner (
+          tanggal,
+          sesi
+        ),
+        user!inner (
+          username
+        )
+      `
+      )
+      .eq("id_konsultasi", id)
+      .single() as { data: any; error: any };
 
-    db.end();
-
-    if (!result || result.length === 0) {
-      return res.status(404).json({ message: "Konsultasi tidak ditemukan" });
+    if (error) {
+      // Jika error karena data tidak ditemukan
+      if (error.code === "PGRST116") {
+        return res.status(404).json({ message: "Konsultasi tidak ditemukan" });
+      }
+      console.error("Supabase error:", error);
+      return res.status(500).json({ message: "Database error" });
     }
 
-    const row = result[0];
+    if (!result) {
+      return res.status(404).json({ message: "Konsultasi tidak ditemukan" });
+    }
 
     // Mapping status dari database
     const statusMap: Record<number, "Terdaftar" | "Menunggu" | "Ditolak"> = {
@@ -82,7 +84,7 @@ export default async function handler(
     };
 
     // Format tanggal pengajuan
-    const tanggalPengajuan = new Date(row.tanggal_pengajuan).toLocaleString(
+    const tanggalPengajuan = new Date(result.tanggal_pengajuan).toLocaleString(
       "id-ID",
       {
         day: "2-digit",
@@ -94,31 +96,30 @@ export default async function handler(
     );
 
     // Format jadwal konsultasi
-    const jadwalKonsultasi = new Date(row.jadwal_tanggal).toLocaleDateString(
-      "id-ID",
-      {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }
-    );
+    const jadwalKonsultasi = new Date(
+      result.jadwal_offline.tanggal
+    ).toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
 
     const detailData: DetailPesanan = {
-      id: row.id_konsultasi,
+      id: result.id_konsultasi,
       namaPsikolog: "SHCC ITS",
       tanggalPengajuan: tanggalPengajuan,
       jadwalKonsultasi: jadwalKonsultasi,
-      sesiKonsultasi: sesiMap[row.sesi] || "Sesi tidak diketahui",
+      sesiKonsultasi:
+        sesiMap[result.jadwal_offline.sesi] || "Sesi tidak diketahui",
       lokasi: "Lantai 2 Kantin Pusat ITS",
-      keluhan: row.keluhan,
-      status: statusMap[row.status] || "Menunggu",
+      keluhan: result.keluhan,
+      status: statusMap[result.status] || "Menunggu",
     };
 
     return res.status(200).json(detailData);
   } catch (err) {
-    console.error("Database error:", err);
-    db.end();
-    return res.status(500).json({ message: "Database error" });
+    console.error("Error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 }

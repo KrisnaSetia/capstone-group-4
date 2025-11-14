@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import { getUserFromRequest } from "@/lib/auth";
-import { RowDataPacket } from "mysql2";
 
 export default async function handler(
   req: NextApiRequest,
@@ -20,40 +19,74 @@ export default async function handler(
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const db = await connectDatabase();
+  // validasi id riwayat
+  const riwayatId = Array.isArray(id)
+    ? parseInt(id[0], 10)
+    : parseInt(id as string, 10);
+  if (Number.isNaN(riwayatId)) {
+    return res.status(400).json({ message: "ID riwayat tidak valid" });
+  }
 
   try {
-    const result: RowDataPacket[] = await new Promise((resolve, reject) => {
-      db.query(
-        `SELECT
-          u.username AS namaPsikolog,
-          p.id_psikolog AS id_psikolog,
-          r.waktu_mulai,
-          r.waktu_selesai,
-          k.keluhan
-        FROM riwayat r
-        INNER JOIN konsultasi_online k ON r.id_konsultasi_online = k.id_konsultasi_online
-        INNER JOIN psikolog p ON k.id_psikolog = p.id_psikolog
-        INNER JOIN user u ON p.id_psikolog = u.id_user
-        WHERE r.id_riwayat = ? AND k.id_mahasiswa = ?
-        LIMIT 1`,
-        [id, user.userId],
-        (err, results) => {
-          if (err) reject(err);
-          else resolve(results as RowDataPacket[]);
-        }
-      );
-    });
+    // 1) Ambil riwayat berdasarkan id_riwayat
+    const { data: riwayat, error: riwayatErr } = await supabaseServer
+      .from("riwayat")
+      .select("id_riwayat, id_konsultasi_online, waktu_mulai, waktu_selesai")
+      .eq("id_riwayat", riwayatId)
+      .maybeSingle();
 
-    db.end();
+    if (riwayatErr) {
+      console.error("Supabase error (riwayat):", riwayatErr);
+      return res.status(500).json({ message: "Terjadi kesalahan internal" });
+    }
 
-    if (!result || result.length === 0) {
+    if (!riwayat) {
       return res.status(404).json({ message: "Riwayat tidak ditemukan" });
     }
 
-    const data = result[0];
+    // 2) Ambil konsultasi_online dan pastikan milik mahasiswa yang login
+    const { data: konsultasi, error: konsultasiErr } = await supabaseServer
+      .from("konsultasi_online")
+      .select("id_psikolog, id_mahasiswa, keluhan")
+      .eq("id_konsultasi_online", riwayat.id_konsultasi_online)
+      .eq("id_mahasiswa", user.userId)
+      .maybeSingle();
 
-    const tanggalKonsultasi = new Date(data.waktu_mulai)
+    if (konsultasiErr) {
+      console.error("Supabase error (konsultasi_online):", konsultasiErr);
+      return res.status(500).json({ message: "Terjadi kesalahan internal" });
+    }
+
+    if (!konsultasi) {
+      // entah tidak ada, atau bukan milik mahasiswa ini
+      return res.status(404).json({ message: "Riwayat tidak ditemukan" });
+    }
+
+    // 3) Ambil data psikolog dari user (via id_psikolog = user.id_user)
+    const { data: psikologUser, error: psikologErr } = await supabaseServer
+      .from("user")
+      .select("username")
+      .eq("id_user", konsultasi.id_psikolog)
+      .maybeSingle();
+
+    if (psikologErr) {
+      console.error("Supabase error (user - psikolog):", psikologErr);
+      return res.status(500).json({ message: "Terjadi kesalahan internal" });
+    }
+
+    const namaPsikolog = psikologUser?.username ?? "Tidak diketahui";
+
+    // 4) Format tanggal & jam seperti versi MySQL
+    if (!riwayat.waktu_mulai || !riwayat.waktu_selesai) {
+      return res
+        .status(500)
+        .json({ message: "Data riwayat tidak lengkap (waktu tidak tersedia)" });
+    }
+
+    const mulai = new Date(riwayat.waktu_mulai);
+    const selesai = new Date(riwayat.waktu_selesai);
+
+    const tanggalKonsultasi = mulai
       .toLocaleString("id-ID", {
         day: "2-digit",
         month: "long",
@@ -62,43 +95,36 @@ export default async function handler(
         minute: "2-digit",
         second: "2-digit",
       })
-      .replace(/\./g, ":");
+      .replace(/\./g, ":"); // locale ID kadang pakai '.' untuk pemisah jam
 
-    const jadwalKonsultasi = new Date(data.waktu_mulai).toLocaleDateString(
-      "id-ID",
-      {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      }
-    );
+    const jadwalKonsultasi = mulai.toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
 
-    const sesiKonsultasi = `${new Date(data.waktu_mulai).toLocaleTimeString(
-      "id-ID",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }
-    )} – ${new Date(data.waktu_selesai).toLocaleTimeString("id-ID", {
+    const sesiKonsultasi = `${mulai.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })} – ${selesai.toLocaleTimeString("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     })}`.replace(/\./g, ":");
 
     return res.status(200).json({
-      id: Number(id), // ← id_riwayat
+      id: riwayatId, // id_riwayat
       id_user: user.userId,
-      id_psikolog: data.id_psikolog,
-      namaPsikolog: data.namaPsikolog,
+      id_psikolog: konsultasi.id_psikolog,
+      namaPsikolog,
       tanggalKonsultasi,
       jadwalKonsultasi,
       sesiKonsultasi,
-      keluhan: data.keluhan,
+      keluhan: konsultasi.keluhan,
     });
-  } catch (error: unknown) {
-    db.end();
+  } catch (error) {
     console.error("Error detail riwayat mahasiswa:", error);
     return res.status(500).json({ message: "Terjadi kesalahan internal" });
   }

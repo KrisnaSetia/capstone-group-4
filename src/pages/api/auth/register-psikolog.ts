@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { connectDatabase } from "@/../db";
+import { supabaseServer } from "@/../db-supabase.js";
 import bcrypt from "bcrypt";
 import "dotenv/config";
 
@@ -14,7 +14,7 @@ interface RegisterRequest {
   kuota_harian: number;
   rating: number;
   deskripsi: string;
-  url_foto?: string; // ✅ Tambahkan ini
+  url_foto?: string;
 }
 
 interface RegisterResponse {
@@ -46,9 +46,10 @@ export default async function handler(
       kuota_harian,
       rating,
       deskripsi,
-      url_foto = "", // ✅ Default kosong
+      url_foto = "",
     }: RegisterRequest = req.body;
 
+    // 🔹 Validasi basic
     if (
       !username ||
       !email ||
@@ -79,119 +80,109 @@ export default async function handler(
     }
 
     if (!["L", "P", "Laki-laki", "Perempuan"].includes(jenis_kelamin)) {
-      return res
-        .status(400)
-        .json({ message: "Jenis kelamin harus L/P atau Laki-laki/Perempuan" });
+      return res.status(400).json({
+        message: "Jenis kelamin harus L/P atau Laki-laki/Perempuan",
+      });
     }
 
     const finalKuotaHarian = kuota_harian || 10;
     const finalRating = rating || 0;
 
-    const db = await connectDatabase();
+    // 🔹 1. Cek email sudah terdaftar di user
+    const { data: existingEmail, error: checkEmailError } = await supabaseServer
+      .from("user")
+      .select("id_user")
+      .eq("email", email)
+      .maybeSingle();
 
-    const checkEmailQuery = `SELECT email FROM user WHERE email = ?`;
-    db.query(checkEmailQuery, [email], async (error: any, results: any) => {
-      if (error) {
-        db.end();
-        console.error("Database error:", error);
-        return res.status(500).json({ message: "Database error" });
-      }
+    if (checkEmailError) {
+      console.error("Supabase check email error:", checkEmailError);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-      if (results.length > 0) {
-        db.end();
-        return res.status(400).json({ message: "Email sudah terdaftar" });
-      }
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email sudah terdaftar" });
+    }
 
-      const checkSertifikasiQuery = `SELECT nomor_sertifikasi FROM psikolog WHERE nomor_sertifikasi = ?`;
-      db.query(
-        checkSertifikasiQuery,
-        [nomor_sertifikasi],
-        async (err2: any, results2: any) => {
-          if (err2) {
-            db.end();
-            console.error("Database error:", err2);
-            return res.status(500).json({ message: "Database error" });
-          }
+    // 🔹 2. Cek nomor sertifikasi unik di psikolog
+    const { data: existingSertif, error: checkSertifError } =
+      await supabaseServer
+        .from("psikolog")
+        .select("id_psikolog")
+        .eq("nomor_sertifikasi", nomor_sertifikasi)
+        .maybeSingle();
 
-          if (results2.length > 0) {
-            db.end();
-            return res
-              .status(400)
-              .json({ message: "Nomor sertifikasi sudah terdaftar" });
-          }
+    if (checkSertifError) {
+      console.error("Supabase check sertifikasi error:", checkSertifError);
+      return res.status(500).json({ message: "Database error" });
+    }
 
-          try {
-            const hashedPassword = await bcrypt.hash(password, 10);
+    if (existingSertif) {
+      return res
+        .status(400)
+        .json({ message: "Nomor sertifikasi sudah terdaftar" });
+    }
 
-            const insertUserQuery = `
-            INSERT INTO user (username, email, password, usia, jenis_kelamin, roles) 
-            VALUES (?, ?, ?, ?, ?, 0)
-          `;
+    // 🔹 3. Hash password
+    let hashedPassword: string;
+    try {
+      hashedPassword = await bcrypt.hash(password, 10);
+    } catch (hashErr) {
+      console.error("Hashing error:", hashErr);
+      return res.status(500).json({ message: "Gagal mengenkripsi password" });
+    }
 
-            db.query(
-              insertUserQuery,
-              [username, email, hashedPassword, usia, jenis_kelamin],
-              (userErr: any, userResult: any) => {
-                if (userErr) {
-                  db.end();
-                  console.error("User insert error:", userErr);
-                  return res
-                    .status(500)
-                    .json({ message: "Gagal mendaftarkan user" });
-                }
+    // 🔹 4. Insert ke tabel user (roles = 0 = psikolog)
+    // di schema kamu: usia & roles = text, jadi kita simpan sebagai string
+    const { data: insertedUser, error: insertUserError } = await supabaseServer
+      .from("user")
+      .insert({
+        username,
+        email,
+        password: hashedPassword,
+        usia: String(usia),
+        jenis_kelamin,
+        roles: "0",
+      })
+      .select("id_user, username, email, roles")
+      .single();
 
-                const userId = userResult.insertId;
+    if (insertUserError || !insertedUser) {
+      console.error("User insert error:", insertUserError);
+      return res.status(500).json({ message: "Gagal mendaftarkan user" });
+    }
 
-                const insertPsikologQuery = `
-                INSERT INTO psikolog 
-                (id_psikolog, nomor_sertifikasi, kuota_harian, rating, deskripsi, url_foto)
-                VALUES (?, ?, ?, ?, ?, ?)
-              `;
+    const userId = insertedUser.id_user;
 
-                db.query(
-                  insertPsikologQuery,
-                  [
-                    userId,
-                    nomor_sertifikasi,
-                    finalKuotaHarian,
-                    finalRating,
-                    deskripsi || "",
-                    url_foto,
-                  ],
-                  (psiErr: any) => {
-                    db.end();
+    // 🔹 5. Insert ke tabel psikolog
+    const { error: insertPsikologError } = await supabaseServer
+      .from("psikolog")
+      .insert({
+        id_psikolog: userId,
+        nomor_sertifikasi,
+        kuota_harian: finalKuotaHarian,
+        rating: finalRating,
+        deskripsi: deskripsi || "",
+        url_foto,
+      });
 
-                    if (psiErr) {
-                      console.error("Psikolog insert error:", psiErr);
-                      return res
-                        .status(500)
-                        .json({ message: "Gagal mendaftarkan psikolog" });
-                    }
+    if (insertPsikologError) {
+      console.error("Psikolog insert error:", insertPsikologError);
+      // idealnya rollback user, tapi belum ada transaction di supabase-js
+      return res.status(500).json({ message: "Gagal mendaftarkan psikolog" });
+    }
 
-                    return res.status(201).json({
-                      message: "Registrasi psikolog berhasil",
-                      user: {
-                        id: userId,
-                        username,
-                        email,
-                        roles: 0,
-                      },
-                    });
-                  }
-                );
-              }
-            );
-          } catch (hashErr) {
-            db.end();
-            console.error("Hashing error:", hashErr);
-            return res
-              .status(500)
-              .json({ message: "Gagal mengenkripsi password" });
-          }
-        }
-      );
+    // 🔹 6. Response sukses
+    return res.status(201).json({
+      message: "Registrasi psikolog berhasil",
+      user: {
+        id: userId,
+        username: insertedUser.username,
+        email: insertedUser.email,
+        roles: 0,
+      },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("Unexpected error:", err);
     return res.status(500).json({ message: "Server error" });
   }

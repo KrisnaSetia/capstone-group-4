@@ -73,12 +73,11 @@ export default async function handler(
       });
     }
 
-    // 3) Hitung rata-rata baru rating psikolog ini
-    const { data: avgRow, error: avgErr } = await supabaseServer
+    // 3) Hitung rata-rata baru rating psikolog ini (di sisi server)
+    const { data: ratingRows, error: avgErr } = await supabaseServer
       .from("rating_psikolog")
-      .select("average:avg(rating)")
-      .eq("id_psikolog", psikologIdNum)
-      .maybeSingle();
+      .select("rating")
+      .eq("id_psikolog", psikologIdNum);
 
     if (avgErr) {
       console.error("Supabase error (avg rating):", avgErr);
@@ -87,11 +86,18 @@ export default async function handler(
       });
     }
 
-    const newAverageRaw = (avgRow as any)?.average ?? 0;
-    const newAverage =
-      typeof newAverageRaw === "number"
-        ? Math.round(newAverageRaw * 10) / 10
-        : Math.round(Number(newAverageRaw || 0) * 10) / 10;
+    const ratings = (ratingRows ?? []).map((row: { rating: number }) =>
+      Number(row.rating)
+    );
+
+    const sum = ratings.reduce(
+      (acc: number, val: number) => acc + (isNaN(val) ? 0 : val),
+      0
+    );
+    const count = ratings.length || 1;
+
+    const newAverageRaw = sum / count;
+    const newAverage = Math.round(newAverageRaw * 10) / 10;
 
     // 4) Update rating di tabel psikolog
     const { error: updateErr } = await supabaseServer

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
-import { supabaseServer } from "@/../db-supabase.js";
+import { supabaseServer } from "@/../db-supabase.js"; // Supabase cloud
+import { query as pgQuery } from "@/../db-postgresql-local.js"; // PostgreSQL lokal
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { serialize } from "cookie";
@@ -36,45 +37,81 @@ export default async function handler(
   try {
     const { email, password } = req.body;
 
-    // Validasi input
     if (!email || !password) {
       return res
         .status(400)
         .json({ message: "Email dan password harus diisi" });
     }
 
-    // Validasi format email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: "Format email tidak valid" });
     }
 
-    // 🔹 Cari user berdasarkan email di Supabase
-    const { data, error } = await supabaseServer
-      .from("user") // nama tabel di Supabase
-      .select("id_user, username, email, password, roles")
-      .eq("email", email)
-      .maybeSingle(); // 1 row atau null
+    const useLocal = process.env.DB_PROVIDER === "local";
 
-    if (error) {
-      console.error("Supabase error:", error);
-      return res.status(500).json({ message: "Database error" });
+    let user: User | null = null;
+
+    if (useLocal) {
+      // 🔹 MODE: PostgreSQL lokal
+      const rows = await pgQuery(
+        `
+        SELECT 
+          id_user,
+          username,
+          email,
+          password,
+          roles
+        FROM "users"
+        WHERE email = $1
+        LIMIT 1
+        `,
+        [email]
+      );
+
+      const row = rows[0];
+      if (!row) {
+        return res.status(401).json({ message: "Email tidak ditemukan" });
+      }
+
+      user = {
+        id: row.id_user,
+        username: row.username,
+        email: row.email,
+        password: row.password,
+        roles:
+          typeof row.roles === "string"
+            ? parseInt(row.roles, 10)
+            : row.roles ?? 0,
+      };
+    } else {
+      // 🔹 MODE: Supabase
+      const { data, error } = await supabaseServer
+        .from("user")
+        .select("id_user, username, email, password, roles")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Supabase error:", error);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      if (!data) {
+        return res.status(401).json({ message: "Email tidak ditemukan" });
+      }
+
+      user = {
+        id: data.id_user,
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        roles:
+          typeof data.roles === "string"
+            ? parseInt(data.roles, 10)
+            : data.roles ?? 0,
+      };
     }
-
-    // Cek apakah email ada
-    if (!data) {
-      return res.status(401).json({ message: "Email tidak ditemukan" });
-    }
-
-    // Di schema Supabase kamu, roles itu bertipe text, jadi kita parse ke number
-    const user: User = {
-      id: data.id_user,
-      username: data.username,
-      email: data.email,
-      password: data.password,
-      roles:
-        typeof data.roles === "string" ? parseInt(data.roles, 10) : data.roles,
-    };
 
     // 🔹 Verifikasi password
     const match = await bcrypt.compare(password, user.password);
@@ -82,7 +119,6 @@ export default async function handler(
       return res.status(401).json({ message: "Password salah" });
     }
 
-    // 🔹 Buat JWT token dengan informasi user yang lebih lengkap
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error("JWT_SECRET environment variable is required");
@@ -99,36 +135,27 @@ export default async function handler(
       expiresIn: "24h",
     });
 
-    // Set cookie dengan konfigurasi yang aman
     const tokenCookie = serialize("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 24 * 60 * 60, // 24 jam dalam detik
+      maxAge: 24 * 60 * 60,
       path: "/",
     });
 
-    // Set header untuk cookie
     res.setHeader("Set-Cookie", tokenCookie);
 
-    // 🔹 Tentukan URL redirect berdasarkan role (tanpa ID di URL)
     let redirectUrl: string;
-
     if (user.roles === 1) {
-      // Mahasiswa (roles = 1)
       redirectUrl = `/mahasiswa/beranda`;
     } else if (user.roles === 0) {
-      // Psikolog (roles = 0)
       redirectUrl = `/psikolog/beranda`;
     } else if (user.roles === 2) {
-      // Admin (roles = 2)
       redirectUrl = `/admin/beranda`;
     } else {
-      // Role tidak dikenali
       return res.status(400).json({ message: "Role user tidak valid" });
     }
 
-    // Response sukses dengan informasi redirect
     return res.status(200).json({
       message: "Login berhasil",
       user: {

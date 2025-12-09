@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "migrate": "node-pg-migrate",
     "test-db": "node test_connection.js",
     "test-supabase": "node connection_supabase.js"
   },
@@ -36,6 +37,8 @@
     "mysql": "^2.18.1",
     "mysql2": "^3.14.1",
     "next": "^15.3.2",
+    "node-pg-migrate": "^8.0.3",
+    "pg": "^8.16.3",
     "postcss": "^8.5.3",
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import { supabaseServer } from "@/../db-supabase.js";
+import { query as pgQuery } from "@/../db-postgresql-local.js"; // ⬇️ TAMBAHAN: import koneksi lokal
 import bcrypt from "bcrypt";
 import "dotenv/config";
 
@@ -42,6 +43,9 @@ export default async function handler(
       jenis_kelamin,
       jurusan,
     }: RegisterMahasiswaRequest = req.body;
+
+    // ⬇️ TAMBAHAN: baca mode DB dari env
+    const useLocal = process.env.DB_PROVIDER === "local";
 
     // 🔹 Validasi basic
     if (
@@ -98,20 +102,39 @@ export default async function handler(
       return res.status(400).json({ message: "Jenis kelamin tidak valid" });
     }
 
-    // 🔹 1. Cek email sudah terdaftar atau belum di Supabase
-    const { data: existingUser, error: checkError } = await supabaseServer
-      .from("user")
-      .select("id_user")
-      .eq("email", email)
-      .maybeSingle();
+    // 🔹 1. Cek email sudah terdaftar atau belum
+    //    —> dibagi dua: mode local vs supabase
+    if (useLocal) {
+      // ⬇️ MODE LOCAL: PostgreSQL lokal
+      const rows = await pgQuery(
+        `
+        SELECT id_user
+        FROM "users"
+        WHERE email = $1
+        LIMIT 1
+        `,
+        [email]
+      );
 
-    if (checkError) {
-      console.error("Supabase check email error:", checkError);
-      return res.status(500).json({ message: "Database error" });
-    }
+      if (rows.length > 0) {
+        return res.status(400).json({ message: "Email sudah terdaftar" });
+      }
+    } else {
+      // ⬇️ MODE SUPABASE (seperti sebelumnya)
+      const { data: existingUser, error: checkError } = await supabaseServer
+        .from("user")
+        .select("id_user")
+        .eq("email", email)
+        .maybeSingle();
 
-    if (existingUser) {
-      return res.status(400).json({ message: "Email sudah terdaftar" });
+      if (checkError) {
+        console.error("Supabase check email error:", checkError);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      if (existingUser) {
+        return res.status(400).json({ message: "Email sudah terdaftar" });
+      }
     }
 
     // 🔹 2. Hash password
@@ -124,39 +147,99 @@ export default async function handler(
     }
 
     // 🔹 3. Insert ke tabel user
-    const { data: insertedUser, error: insertUserError } = await supabaseServer
-      .from("user")
-      .insert({
-        username,
-        email,
-        password: hashedPassword,
-        usia: String(usia),
-        jenis_kelamin: genderForDb, // ⬅️ hanya "L" atau "P" yang disimpan
-        roles: "1", // 1 = mahasiswa (disimpan sebagai text)
-      })
-      .select("id_user, username, email, roles")
-      .single();
+    let userId: number;
+    let returnedUser: { username: string; email: string; roles: number };
 
-    if (insertUserError || !insertedUser) {
-      console.error("Supabase insert user error:", insertUserError);
-      return res.status(500).json({ message: "Gagal menyimpan user" });
+    if (useLocal) {
+      // ⬇️ MODE LOCAL: insert ke PostgreSQL lokal
+      const rows = await pgQuery(
+        `
+        INSERT INTO "users" (username, email, password, usia, jenis_kelamin, roles)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id_user, username, email, roles
+        `,
+        [username, email, hashedPassword, String(usia), genderForDb, "1"] // roles "1" = mahasiswa
+      );
+
+      const row = rows[0];
+      if (!row) {
+        console.error("Insert user lokal gagal, row kosong");
+        return res.status(500).json({ message: "Gagal menyimpan user" });
+      }
+
+      userId = row.id_user;
+      returnedUser = {
+        username: row.username,
+        email: row.email,
+        roles:
+          typeof row.roles === "string"
+            ? parseInt(row.roles, 10)
+            : row.roles ?? 1,
+      };
+    } else {
+      // ⬇️ MODE SUPABASE: seperti kode lama
+      const { data: insertedUser, error: insertUserError } =
+        await supabaseServer
+          .from("user")
+          .insert({
+            username,
+            email,
+            password: hashedPassword,
+            usia: String(usia),
+            jenis_kelamin: genderForDb, // ⬅️ hanya "L" atau "P" yang disimpan
+            roles: "1", // 1 = mahasiswa (disimpan sebagai text)
+          })
+          .select("id_user, username, email, roles")
+          .single();
+
+      if (insertUserError || !insertedUser) {
+        console.error("Supabase insert user error:", insertUserError);
+        return res.status(500).json({ message: "Gagal menyimpan user" });
+      }
+
+      userId = insertedUser.id_user;
+      returnedUser = {
+        username: insertedUser.username,
+        email: insertedUser.email,
+        roles:
+          typeof insertedUser.roles === "string"
+            ? parseInt(insertedUser.roles, 10)
+            : insertedUser.roles ?? 1,
+      };
     }
 
-    const userId = insertedUser.id_user;
+    // 🔹 4. Insert ke tabel mahasiswa
+    if (useLocal) {
+      // ⬇️ MODE LOCAL
+      try {
+        await pgQuery(
+          `
+          INSERT INTO mahasiswa (id_mahasiswa, jurusan_mahasiswa)
+          VALUES ($1, $2)
+          `,
+          [userId, jurusan]
+        );
+      } catch (err) {
+        console.error("Insert mahasiswa lokal error:", err);
+        return res
+          .status(500)
+          .json({ message: "Gagal menyimpan data mahasiswa" });
+      }
+    } else {
+      // ⬇️ MODE SUPABASE
+      const { error: insertMahasiswaError } = await supabaseServer
+        .from("mahasiswa")
+        .insert({
+          id_mahasiswa: userId,
+          jurusan_mahasiswa: jurusan,
+        });
 
-    // 🔹 4. Insert ke tabel mahasiswa (extend dari user)
-    const { error: insertMahasiswaError } = await supabaseServer
-      .from("mahasiswa")
-      .insert({
-        id_mahasiswa: userId,
-        jurusan_mahasiswa: jurusan,
-      });
-
-    if (insertMahasiswaError) {
-      console.error("Supabase insert mahasiswa error:", insertMahasiswaError);
-      return res
-        .status(500)
-        .json({ message: "Gagal menyimpan data mahasiswa" });
+      if (insertMahasiswaError) {
+        console.error("Supabase insert mahasiswa error:", insertMahasiswaError);
+        return res
+          .status(500)
+          .json({ message: "Gagal menyimpan data mahasiswa" });
+      }
     }
 
     // 🔹 5. Response sukses
@@ -164,8 +247,8 @@ export default async function handler(
       message: "Registrasi mahasiswa berhasil",
       user: {
         id: userId,
-        username: insertedUser.username,
-        email: insertedUser.email,
+        username: returnedUser.username,
+        email: returnedUser.email,
         roles: 1, // dikembalikan sebagai number
       },
     });

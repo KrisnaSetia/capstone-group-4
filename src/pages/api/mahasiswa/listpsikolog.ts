@@ -22,7 +22,8 @@ export default async function handler(
       .from("psikolog")
       .select(
         "id_psikolog, nomor_sertifikasi, kuota_harian, rating, deskripsi, url_foto"
-      );
+      )
+      .order("id_psikolog", { ascending: true });
 
     if (psikologErr) {
       console.error("Supabase error (psikolog):", psikologErr);
@@ -54,10 +55,10 @@ export default async function handler(
       userMap.set(u.id_user, u.username);
     }
 
-    // 3) Gabungkan hasil supaya bentuknya sama seperti versi MySQL
+    // 3) Gabungkan hasil
     const combined = (psikologList as any[]).map((p) => ({
       id_psikolog: p.id_psikolog,
-      username: userMap.get(p.id_psikolog) ?? null, // kalau user tidak ketemu
+      username: userMap.get(p.id_psikolog) ?? null,
       nomor_sertifikasi: p.nomor_sertifikasi,
       kuota_harian: p.kuota_harian,
       rating: p.rating,

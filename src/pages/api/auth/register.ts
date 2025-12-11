@@ -246,7 +246,7 @@ export default async function handler(
     return res.status(201).json({
       message: "Registrasi mahasiswa berhasil",
       user: {
-        id: userId,
+        id: Number(userId),
         username: returnedUser.username,
         email: returnedUser.email,
         roles: 1, // dikembalikan sebagai number

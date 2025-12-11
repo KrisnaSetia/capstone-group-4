@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextApiRequest, NextApiResponse } from "next";
 import { supabaseServer } from "@/../db-supabase.js";
+import { query as pgQuery } from "@/../db-postgresql-local.js"; // ⬇️ TAMBAHAN: koneksi PostgreSQL lokal
 import { getUserFromRequest } from "@/lib/auth";
 
 type KonsultasiOfflineRow = {
@@ -10,7 +12,7 @@ type KonsultasiOfflineRow = {
 
 type JadwalOfflineRow = {
   id_jadwal: number;
-  tanggal: string; // ISO datetime dari Supabase
+  tanggal: string; // ISO datetime dari DB
   sesi: number;
 };
 
@@ -23,10 +25,13 @@ export default async function handler(
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  // ⬇️ TAMBAHAN: baca mode DB dari env
+  const useLocal = process.env.DB_PROVIDER === "local";
+
   if (req.method === "GET") {
-    return handleGet(req, res, user.userId);
+    return handleGet(req, res, user.userId, useLocal);
   } else if (req.method === "POST") {
-    return handlePost(req, res, user.userId);
+    return handlePost(req, res, user.userId, useLocal);
   } else {
     return res.status(405).json({ message: "Method not allowed" });
   }
@@ -36,22 +41,42 @@ export default async function handler(
 async function handleGet(
   _req: NextApiRequest,
   res: NextApiResponse,
-  userId: number
+  userId: number,
+  useLocal: boolean // ⬇️ TAMBAHAN: param mode DB
 ) {
   try {
-    // 1) Ambil semua konsultasi_offline milik user
-    const { data: konsulRows, error: konsulErr } = await supabaseServer
-      .from("konsultasi_offline")
-      .select("id_konsultasi, status, id_jadwal")
-      .eq("id_user", userId)
-      .order("id_konsultasi", { ascending: false });
+    let konsultasiList: KonsultasiOfflineRow[] = [];
 
-    if (konsulErr) {
-      console.error("Supabase error (konsultasi_offline GET):", konsulErr);
-      return res.status(500).json({ message: "Database error" });
+    if (useLocal) {
+      // ⬇️ MODE LOCAL: ambil dari PostgreSQL lokal
+      const rows = (await pgQuery(
+        `
+        SELECT 
+          id_konsultasi,
+          status,
+          id_jadwal
+        FROM konsultasi_offline
+        WHERE id_user = $1
+        ORDER BY id_konsultasi DESC
+        `,
+        [userId]
+      )) as KonsultasiOfflineRow[];
+      konsultasiList = rows;
+    } else {
+      // ⬇️ MODE SUPABASE: kode lama
+      const { data: konsulRows, error: konsulErr } = await supabaseServer
+        .from("konsultasi_offline")
+        .select("id_konsultasi, status, id_jadwal")
+        .eq("id_user", userId)
+        .order("id_konsultasi", { ascending: false });
+
+      if (konsulErr) {
+        console.error("Supabase error (konsultasi_offline GET):", konsulErr);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      konsultasiList = (konsulRows ?? []) as KonsultasiOfflineRow[];
     }
-
-    const konsultasiList = (konsulRows ?? []) as KonsultasiOfflineRow[];
 
     if (konsultasiList.length === 0) {
       return res.status(200).json({ data: [] });
@@ -61,18 +86,42 @@ async function handleGet(
       new Set(konsultasiList.map((k) => k.id_jadwal))
     );
 
-    // 2) Ambil semua jadwal_offline yang terkait
-    const { data: jadwalRows, error: jadwalErr } = await supabaseServer
-      .from("jadwal_offline")
-      .select("id_jadwal, tanggal, sesi")
-      .in("id_jadwal", idJadwalList);
+    let jadwalList: JadwalOfflineRow[] = [];
 
-    if (jadwalErr) {
-      console.error("Supabase error (jadwal_offline GET):", jadwalErr);
-      return res.status(500).json({ message: "Database error" });
+    if (useLocal) {
+      // ⬇️ MODE LOCAL: ambil jadwal offline via SQL IN
+      const placeholders = idJadwalList
+        .map((_, idx) => `$${idx + 1}`)
+        .join(", ");
+
+      const rows = (await pgQuery(
+        `
+        SELECT 
+          id_jadwal,
+          tanggal,
+          sesi
+        FROM jadwal_offline
+        WHERE id_jadwal IN (${placeholders})
+        `,
+        idJadwalList
+      )) as JadwalOfflineRow[];
+
+      jadwalList = rows;
+    } else {
+      // ⬇️ MODE SUPABASE
+      const { data: jadwalRows, error: jadwalErr } = await supabaseServer
+        .from("jadwal_offline")
+        .select("id_jadwal, tanggal, sesi")
+        .in("id_jadwal", idJadwalList);
+
+      if (jadwalErr) {
+        console.error("Supabase error (jadwal_offline GET):", jadwalErr);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      jadwalList = (jadwalRows ?? []) as JadwalOfflineRow[];
     }
 
-    const jadwalList = (jadwalRows ?? []) as JadwalOfflineRow[];
     const jadwalMap = new Map<number, JadwalOfflineRow>();
     for (const j of jadwalList) {
       jadwalMap.set(j.id_jadwal, j);
@@ -104,7 +153,8 @@ async function handleGet(
 async function handlePost(
   req: NextApiRequest,
   res: NextApiResponse,
-  userId: number
+  userId: number,
+  useLocal: boolean // ⬇️ TAMBAHAN: param mode DB
 ) {
   const { id_jadwal, sesi, keluhan } = req.body;
 
@@ -114,15 +164,34 @@ async function handlePost(
 
   try {
     // 1) Cek jadwal_offline ada dan ambil tanggal + status
-    const { data: jadwalRow, error: jadwalErr } = await supabaseServer
-      .from("jadwal_offline")
-      .select("tanggal, status")
-      .eq("id_jadwal", id_jadwal)
-      .maybeSingle();
+    let jadwalRow: { tanggal: string; status: any } | null = null;
 
-    if (jadwalErr) {
-      console.error("Supabase error (cek jadwal_offline):", jadwalErr);
-      return res.status(500).json({ message: "Database error" });
+    if (useLocal) {
+      // ⬇️ MODE LOCAL
+      const rows = (await pgQuery(
+        `
+        SELECT tanggal, status
+        FROM jadwal_offline
+        WHERE id_jadwal = $1
+        LIMIT 1
+        `,
+        [id_jadwal]
+      )) as { tanggal: string; status: any }[];
+      jadwalRow = rows[0] ?? null;
+    } else {
+      // ⬇️ MODE SUPABASE
+      const { data, error: jadwalErr } = await supabaseServer
+        .from("jadwal_offline")
+        .select("tanggal, status")
+        .eq("id_jadwal", id_jadwal)
+        .maybeSingle();
+
+      if (jadwalErr) {
+        console.error("Supabase error (cek jadwal_offline):", jadwalErr);
+        return res.status(500).json({ message: "Database error" });
+      }
+
+      jadwalRow = data;
     }
 
     if (!jadwalRow) {
@@ -132,7 +201,8 @@ async function handlePost(
     const tanggal = new Date(jadwalRow.tanggal);
     const hari = tanggal.getDay(); // 0=Min,1=Sen,2=Sel,3=Rab,4=Kam,5=Jum,6=Sab
 
-    if (jadwalRow.status === 1) {
+    // status di schema bertipe text, jadi amankan pakai Number()
+    if (Number(jadwalRow.status) === 1) {
       return res.status(400).json({
         message: "Sesi ini sudah penuh. Silakan pilih jadwal lain.",
       });
@@ -150,63 +220,143 @@ async function handlePost(
     }
 
     // 2) Cek jumlah peserta di jadwal ini
-    const { count: jumlah, error: countErr } = await supabaseServer
-      .from("konsultasi_offline")
-      .select("id_konsultasi", { count: "exact", head: true })
-      .eq("id_jadwal", id_jadwal);
+    let jumlah = 0;
 
-    if (countErr) {
-      console.error("Supabase error (cek kuota):", countErr);
-      return res.status(500).json({ message: "Gagal cek kuota." });
+    if (useLocal) {
+      // ⬇️ MODE LOCAL
+      const rows = (await pgQuery(
+        `
+        SELECT COUNT(*)::text AS count
+        FROM konsultasi_offline
+        WHERE id_jadwal = $1
+        `,
+        [id_jadwal]
+      )) as { count: string }[];
+      jumlah = rows.length > 0 ? Number(rows[0].count) : 0;
+    } else {
+      // ⬇️ MODE SUPABASE
+      const { count, error: countErr } = await supabaseServer
+        .from("konsultasi_offline")
+        .select("id_konsultasi", { count: "exact", head: true })
+        .eq("id_jadwal", id_jadwal);
+
+      if (countErr) {
+        console.error("Supabase error (cek kuota):", countErr);
+        return res.status(500).json({ message: "Gagal cek kuota." });
+      }
+
+      jumlah = count ?? 0;
     }
 
-    if ((jumlah ?? 0) >= 5) {
+    if (jumlah >= 5) {
       return res.status(400).json({ message: "Kuota sesi ini sudah penuh." });
     }
 
     // 3) Insert konsultasi baru
     const nowIso = new Date().toISOString();
 
-    const { error: insertErr } = await supabaseServer
-      .from("konsultasi_offline")
-      .insert({
-        id_user: userId,
-        id_jadwal,
-        keluhan,
-        tanggal_pengajuan: nowIso,
-        status: 1, // terdaftar
-      });
+    if (useLocal) {
+      // ⬇️ MODE LOCAL
+      try {
+        await pgQuery(
+          `
+          INSERT INTO konsultasi_offline (id_user, id_jadwal, keluhan, tanggal_pengajuan, status)
+          VALUES ($1, $2, $3, $4, $5)
+          `,
+          [userId, id_jadwal, keluhan, nowIso, 1]
+        );
+      } catch (err) {
+        console.error("PostgreSQL error (insert konsultasi_offline):", err);
+        return res
+          .status(500)
+          .json({ message: "Gagal menyimpan pendaftaran." });
+      }
+    } else {
+      // ⬇️ MODE SUPABASE
+      const { error: insertErr } = await supabaseServer
+        .from("konsultasi_offline")
+        .insert({
+          id_user: userId,
+          id_jadwal,
+          keluhan,
+          tanggal_pengajuan: nowIso,
+          status: 1, // terdaftar
+        });
 
-    if (insertErr) {
-      console.error("Supabase error (insert konsultasi_offline):", insertErr);
-      return res.status(500).json({ message: "Gagal menyimpan pendaftaran." });
+      if (insertErr) {
+        console.error("Supabase error (insert konsultasi_offline):", insertErr);
+        return res
+          .status(500)
+          .json({ message: "Gagal menyimpan pendaftaran." });
+      }
     }
 
     // 4) Cek lagi kuota akhir setelah insert
-    const { count: finalCount, error: finalCountErr } = await supabaseServer
-      .from("konsultasi_offline")
-      .select("id_konsultasi", { count: "exact", head: true })
-      .eq("id_jadwal", id_jadwal);
+    let finalCount = 0;
 
-    if (finalCountErr) {
-      console.error("Supabase error (cek kuota akhir):", finalCountErr);
-      return res.status(500).json({ message: "Gagal verifikasi kuota akhir." });
-    }
-
-    if ((finalCount ?? 0) >= 5) {
-      // Tutup jadwal kalau kuota sudah penuh
-      const { error: updateErr } = await supabaseServer
-        .from("jadwal_offline")
-        .update({ status: 1 }) // 1 = penuh
+    if (useLocal) {
+      // ⬇️ MODE LOCAL
+      const rows = (await pgQuery(
+        `
+        SELECT COUNT(*)::text AS count
+        FROM konsultasi_offline
+        WHERE id_jadwal = $1
+        `,
+        [id_jadwal]
+      )) as { count: string }[];
+      finalCount = rows.length > 0 ? Number(rows[0].count) : 0;
+    } else {
+      // ⬇️ MODE SUPABASE
+      const { count, error: finalCountErr } = await supabaseServer
+        .from("konsultasi_offline")
+        .select("id_konsultasi", { count: "exact", head: true })
         .eq("id_jadwal", id_jadwal);
 
-      if (updateErr) {
-        console.error("Supabase error (update jadwal_offline):", updateErr);
-        // tetap anggap daftar berhasil, hanya gagal update flag penuh
-        return res.status(200).json({
-          message:
-            "Pendaftaran berhasil, tetapi gagal memperbarui status jadwal.",
-        });
+      if (finalCountErr) {
+        console.error("Supabase error (cek kuota akhir):", finalCountErr);
+        return res
+          .status(500)
+          .json({ message: "Gagal verifikasi kuota akhir." });
+      }
+
+      finalCount = count ?? 0;
+    }
+
+    if (finalCount >= 5) {
+      // Tutup jadwal kalau kuota sudah penuh
+      if (useLocal) {
+        // ⬇️ MODE LOCAL
+        try {
+          await pgQuery(
+            `
+            UPDATE jadwal_offline
+            SET status = $1
+            WHERE id_jadwal = $2
+            `,
+            ["1", id_jadwal] // status text, pakai "1"
+          );
+        } catch (err) {
+          console.error("PostgreSQL error (update jadwal_offline):", err);
+          return res.status(200).json({
+            message:
+              "Pendaftaran berhasil, tetapi gagal memperbarui status jadwal.",
+          });
+        }
+      } else {
+        // ⬇️ MODE SUPABASE
+        const { error: updateErr } = await supabaseServer
+          .from("jadwal_offline")
+          .update({ status: 1 }) // 1 = penuh
+          .eq("id_jadwal", id_jadwal);
+
+        if (updateErr) {
+          console.error("Supabase error (update jadwal_offline):", updateErr);
+          // tetap anggap daftar berhasil, hanya gagal update flag penuh
+          return res.status(200).json({
+            message:
+              "Pendaftaran berhasil, tetapi gagal memperbarui status jadwal.",
+          });
+        }
       }
 
       return res.status(200).json({

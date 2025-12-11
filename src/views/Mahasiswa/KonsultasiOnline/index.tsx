@@ -44,16 +44,7 @@ export default function KonsultasiOnlineMahasiswa() {
       try {
         const res = await fetch("/api/mahasiswa/konsultasionline");
         const json = await res.json();
-        setOrderData(
-          (json.data || []).map((item: SesiData) => ({
-            ...item,
-            tanggal: new Date(item.tanggal).toLocaleDateString("id-ID", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            }),
-          }))
-        );
+        setOrderData(json.data || []);
       } catch (error) {
         console.error("Gagal mengambil data konsultasi:", error);
       } finally {
